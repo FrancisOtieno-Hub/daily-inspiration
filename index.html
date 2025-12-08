@@ -27,7 +27,7 @@
   /* Categories: horizontally scrollable on mobile */
   .categories{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
   .categories::-webkit-scrollbar{display:none}
-  .cat{color:#222;background:var(--glass);padding:8px 12px;border-radius:12px;cursor:pointer;border:1px solid rgba(0,0,0,0.04);font-weight:600;white-space:nowrap}
+  .cat{color:#222;background:rgba(245,124,0,0.15);padding:8px 12px;border-radius:12px;cursor:pointer;border:1px solid rgba(245,124,0,0.25);font-weight:600;}
   .cat.active{background:#fff;border-color:rgba(0,0,0,0.08);box-shadow:0 8px 18px rgba(0,0,0,0.06)}
 
   .quote-area{display:flex;flex-direction:column;gap:12px}
@@ -110,17 +110,17 @@
 
       <div class="meta">
         <div class="favorites">
-          <button id="btn-prev" class="small btn-ghost" aria-label="Previous Quote">◀ Prev</button>
-          <button id="btn-next" class="small btn-ghost" aria-label="Next Quote">Next ▶</button>
-          <button id="btn-fav" class="small" aria-label="Favorite Quote">★ Favorite</button>
+          
+          
+          
         </div>
         <div id="progress" style="font-size:0.9rem;color:var(--muted)">0 / 0</div>
       </div>
 
       <div class="controls">
-        <button id="btn-export" class="small">Export</button>
-        <button id="btn-auto" class="small btn-ghost">Auto Off</button>
-        <button id="btn-share-img" class="small btn-ghost">🖼️ Image</button>
+        
+        
+        
       </div>
 
       <div id="favorites-panel" style="display:none;margin-top:10px;">
@@ -305,21 +305,22 @@ quoteEl.parentElement.addEventListener('touchend', e => { touchEndX = e.changedT
 function handleSwipe(){ const dx = touchEndX - touchStartX; if (Math.abs(dx) > swipeThreshold) { if (dx < 0) showNext(); else showPrevious(); } }
   
 function initApp(){
+  qs('#float-next').onclick=showNext;
+  qs('#float-prev').onclick=showPrevious;
   buildCategories();
   const last=LS.get('lastCategory',state.categories[0]); selectCategory(last);
   renderFavorites();
 
-  qs('#btn-next').onclick=()=>showNext();
-  qs('#btn-prev').onclick=()=>showPrevious();
-  qs('#btn-fav').onclick=toggleFavorite;
-  qs('#btn-export').onclick=exportFavorites;
+  
+  
+  
+  
   qs('#btn-notify').onclick=enableNotifications;
-  qs('#btn-auto').onclick=()=>{
-    autoMode=!autoMode; qs('#btn-auto').textContent=autoMode?'Auto On':'Auto Off';
+   qs('#btn-auto').textContent=autoMode?'Auto On':'Auto Off';
     if(autoMode){autoInterval=setInterval(showNext,8000);} else clearInterval(autoInterval);
   };
   qs('#btn-share').onclick=shareCurrent;
-  qs('#btn-share-img').onclick=shareQuoteImage;
+  
   qs('#btn-float-next').onclick=showNext;
 
   document.addEventListener('keydown',e=>{
@@ -347,5 +348,15 @@ function initApp(){
   setTimeout(()=>qs('#splash').style.display='none',1100);
 }
 </script>
+<button id="float-prev" class="float-btn" style="left:16px;">⟵</button>
+<button id="float-next" class="float-btn" style="right:16px;">⟶</button>
+<style>
+.float-btn{
+ position:fixed;bottom:80px;z-index:999;background:var(--accent);color:white;border:none;
+ padding:14px 18px;border-radius:50%;font-size:1.4rem;box-shadow:0 6px 16px rgba(0,0,0,0.2);
+}
+@media(min-width:700px){.float-btn{display:none;}}
+footer{position:fixed;bottom:0;left:0;width:100%;background:transparent;padding:8px 0;}
+</style>
 </body>
 </html>
