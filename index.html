@@ -126,197 +126,383 @@
 
 <script>
 const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false };
+const qs = s => document.querySelector(s), qsa = s => Array.from(document.querySelectorAll(s));
+const LS = {
+  get: (k, fallback) => {
+    try {
+      const v = localStorage.getItem(k);
+      return v === null ? fallback : JSON.parse(v);
+    } catch (e) { return fallback; }
+  },
+  set: (k, v) => {
+    try { localStorage.setItem(k, JSON.stringify(v)); }
+    catch (e) { /* ignore */ }
+  }
+};
+
 let autoMode = false, autoInterval = null;
 
-const qs = s => document.querySelector(s), qsa = s => Array.from(document.querySelectorAll(s));
-const LS = { get: (k, f) => { try { return JSON.parse(localStorage.getItem(k)) ?? f; } catch (e) { return f } }, set: (k, v) => localStorage.setItem(k, JSON.stringify(v)) };
+// Elements we expect (guarded usage)
+const quoteEl = qs('#quote'), authorEl = qs('#author'), progressEl = qs('#progress');
+const categoriesEl = qs('#categories');
 
-// Fetch quotes.json with fallback
+// utility
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    let j = Math.floor(Math.random()*(i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// --- fetch quotes.json with fallback ---
 (async function loadQuotes(){
   try{
     const r = await fetch('quotes.json');
     if(!r.ok) throw new Error('fetch failed');
-    const data = await r.json(); Object.assign(DB, data);
+    const data = await r.json();
+    Object.assign(DB, data);
   }catch(e){
     console.warn('quotes load failed', e);
-    DB['General'] = [{text:'Welcome — add quotes.json to get started',author:'App'}];
+    DB['General'] = [{ text: 'Welcome — add quotes.json to get started', author: 'App' }];
   } finally {
     state.categories = Object.keys(DB);
     initApp();
   }
 })();
 
-const quoteEl = qs('#quote'), authorEl = qs('#author'), progressEl = qs('#progress');
-const categoriesEl = qs('#categories'), favPanel = qs('#favorites-panel'), favList = qs('#fav-list');
-
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } }
-
+// Build categories as accessible tabs
 function buildCategories(){
+  if(!categoriesEl) return;
   categoriesEl.innerHTML = '';
-  state.categories.forEach((cat,i)=>{
+  state.categories.forEach((cat, i) => {
     const btn = document.createElement('button');
-    btn.className = 'cat'; btn.textContent = cat; btn.setAttribute('role','tab');
-    btn.setAttribute('aria-selected','false'); btn.setAttribute('tabindex','0');
-    btn.addEventListener('click', ()=> selectCategory(cat));
-    btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); selectCategory(cat); } });
+    btn.className = 'cat';
+    btn.textContent = cat;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', 'false');
+    btn.setAttribute('tabindex', i === 0 ? '0' : '-1'); // only first is in tab order initially
+    btn.id = `tab-${i}`;
+    btn.setAttribute('aria-controls', 'quote-box');
+    btn.addEventListener('click', () => selectCategory(cat));
+    btn.addEventListener('keydown', (e) => {
+      // Arrow navigation between categories
+      if(e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End'){
+        e.preventDefault();
+        const all = qsa('.cat');
+        const idx = all.indexOf(btn);
+        let nextIdx = idx;
+        if(e.key === 'ArrowRight') nextIdx = (idx + 1) % all.length;
+        if(e.key === 'ArrowLeft') nextIdx = (idx - 1 + all.length) % all.length;
+        if(e.key === 'Home') nextIdx = 0;
+        if(e.key === 'End') nextIdx = all.length - 1;
+        all[nextIdx].focus();
+        all[nextIdx].click();
+      } else if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        selectCategory(cat);
+      }
+    });
     categoriesEl.appendChild(btn);
   });
 }
 
+// Select a category and prepare pool
 function selectCategory(cat){
-  state.active = cat; state.pool = [...(DB[cat]||[])];
-  if(!state.pool.length){ state.index = 0; updateCategoryUI(); displayEmpty(); return; }
+  state.active = cat;
+  state.pool = Array.isArray(DB[cat]) ? [...DB[cat]] : [];
+  if(state.pool.length === 0){
+    state.index = 0;
+    renderEmpty();
+    updateCategoryUI();
+    LS.set('lastCategory', cat);
+    return;
+  }
   if(state.random) shuffle(state.pool);
-  state.index = 0; updateCategoryUI(); showNext(true); LS.set('lastCategory',cat);
+  state.index = 0;
+  // show first item immediately (consistent)
+  displayCurrent(true);
+  updateCategoryUI();
+  LS.set('lastCategory', cat);
+}
+
+function renderEmpty(){
+  if(quoteEl) quoteEl.textContent = 'No items in this category.';
+  if(authorEl) authorEl.textContent = '';
+  if(progressEl) progressEl.textContent = '0 / 0';
 }
 
 function updateCategoryUI(){
-  qsa('.cat').forEach(el=>{
-    el.classList.toggle('active', el.textContent===state.active);
-    el.setAttribute('aria-selected', el.textContent===state.active? 'true':'false');
-    if(el.textContent===state.active) el.focus();
+  // update active class and aria-selected
+  qsa('.cat').forEach(el => {
+    const isActive = el.textContent === state.active;
+    el.classList.toggle('active', isActive);
+    el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    el.setAttribute('tabindex', isActive ? '0' : '-1');
   });
-  const total = state.pool?.length||0; const current = Math.min(Math.max(state.index, (state.index>0?state.index:0)), total);
-  progressEl.textContent = `${current} / ${total}`;
-  updateFavButtonState();
+
+  const total = state.pool.length;
+  // Human-friendly current index: show 1-based index if there's at least one item.
+  const current = total === 0 ? 0 : Math.min(state.index, total); // state.index points to next to show in showNext; displayCurrent uses displayedIndex
+  if(progressEl) {
+    // compute displayed index: if we have previously displayed item, attempt to show that 1-based position
+    // we'll store lastDisplayedIndex as last shown position (1-based) on state for accurate progress
+    const displayed = state.lastDisplayedIndex ?? (total === 0 ? 0 : 1);
+    progressEl.textContent = `${displayed} / ${total}`;
+  }
+  // update notification button state if present
+  const btnNotify = qs('#btn-notify');
+  if(btnNotify) {
+    if(LS.get('notifications', false) && Notification.permission === 'granted'){
+      btnNotify.textContent = '🔔 On';
+      btnNotify.setAttribute('aria-pressed', 'true');
+    } else {
+      btnNotify.setAttribute('aria-pressed', 'false');
+    }
+  }
 }
 
-function displayEmpty(){ quoteEl.textContent='No items in this category.'; authorEl.textContent=''; progressEl.textContent='0 / 0'; }
+// Show the currently indexed item (used after setting state.index)
+function displayCurrent(skipFade = false){
+  if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // state.index is 0-based and points to next item to show in showNext flow.
+  // For displayCurrent, if state.index === 0, we want pool[0].
+  const idxToShow = (state.index % state.pool.length + state.pool.length) % state.pool.length;
+  const item = state.pool[idxToShow];
+  // remember displayed index for progress
+  state.lastDisplayedIndex = idxToShow + 1;
 
-function showNext(skipFade=false){
-  if(!state.pool || state.pool.length===0) return displayEmpty();
-  if(state.index >= state.pool.length) state.index = 0;
-  const item = state.pool[state.index++];
-  displayQuote(item, skipFade);
-}
-
-function showPrevious(skipFade=false){
-  if(!state.pool || state.pool.length===0) return displayEmpty();
-  state.index--; if(state.index < 0) state.index = state.pool.length - 1;
-  const item = state.pool[state.index];
-  displayQuote(item, skipFade);
-}
-
-function displayQuote(item, skipFade){
-  if(!skipFade){
+  if(!skipFade && quoteEl && authorEl){
     quoteEl.classList.add('enter'); authorEl.classList.add('enter');
-    setTimeout(()=>{
+    setTimeout(() => {
       quoteEl.textContent = item.text;
-      authorEl.textContent = item.author? `— ${item.author}` : '';
+      authorEl.textContent = item.author ? `— ${item.author}` : '';
+      // trigger reflow for animation
       void quoteEl.offsetWidth;
       quoteEl.classList.remove('enter'); authorEl.classList.remove('enter');
       updateCategoryUI();
     }, 120);
   } else {
-    quoteEl.textContent = item.text; authorEl.textContent = item.author? `— ${item.author}` : '';
+    if(quoteEl) quoteEl.textContent = item.text;
+    if(authorEl) authorEl.textContent = item.author ? `— ${item.author}` : '';
     updateCategoryUI();
   }
 }
 
-function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-  const words = text.split(' '); let line = '', lines = [];
-  for(let n=0;n<words.length;n++){
-    const testLine = line + words[n] + ' ';
-    if(ctx.measureText(testLine).width > maxWidth && n>0){ lines.push(line); line = words[n] + ' '; } else { line = testLine; }
-  }
-  lines.push(line);
-  lines.forEach((l,i)=> ctx.fillText(l, x, y + (i * lineHeight)));
+// Advance to next item (wraps)
+function showNext(skipFade = false){
+  if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // show current then increment index for next time
+  displayCurrent(skipFade);
+  state.index = (state.index + 1) % state.pool.length;
+  // after showing, update lastDisplayedIndex already set in displayCurrent
+  updateCategoryUI();
 }
 
+// Show previous item (wrap backwards)
+function showPrevious(skipFade = false){
+  if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // decrement index to point to previous item, then display it
+  // Because state.index points to the "next to show" in normal flow, previous is:
+  state.index = (state.index - 1 + state.pool.length) % state.pool.length;
+  displayCurrent(skipFade);
+  // increment index so that subsequent showNext continues forward from the item after the displayed one
+  state.index = (state.index + 1) % state.pool.length;
+  updateCategoryUI();
+}
+
+// Text wrapping for canvas
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '', lines = [];
+  for(let n = 0; n < words.length; n++){
+    const testLine = line + words[n] + ' ';
+    if(ctx.measureText(testLine).width > maxWidth && n > 0){
+      lines.push(line.trim());
+      line = words[n] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  if(line) lines.push(line.trim());
+  lines.forEach((l, i) => ctx.fillText(l, x, y + (i * lineHeight)));
+}
+
+// Share quote as an image (graceful fallback)
 function shareQuoteImage(){
-  const text = quoteEl.textContent, author = authorEl.textContent.replace(/^—\s?/, '');
-  const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 675;
+  if(!quoteEl) return;
+  const text = quoteEl.textContent || '';
+  const author = (authorEl ? authorEl.textContent.replace(/^—\s?/, '') : '') || '';
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200; canvas.height = 675;
   const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height); grad.addColorStop(0,'#ffecd2'); grad.addColorStop(1,'#fcb69f'); ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = '#222'; ctx.textAlign = 'center'; ctx.font = 'bold 40px Inter, sans-serif';
-  wrapText(ctx, text, canvas.width/2, 200, 1000, 56);
-  if(author){ ctx.font = 'italic 30px Inter, sans-serif'; ctx.fillText(`— ${author}`, canvas.width/2, 520); }
-  canvas.toBlob(async blob=>{
-    const file = new File([blob], 'quote.png', { type: 'image/png' });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){ navigator.share({ files: [file], title: 'Daily Inspiration' }).catch(()=>{}); }
-    else {
-      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'quote.png'; a.click(); URL.revokeObjectURL(url);
+  // gradient background
+  const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  grad.addColorStop(0,'#ffecd2'); grad.addColorStop(1,'#fcb69f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // text (attempt to use Inter - will fallback to sans-serif)
+  ctx.fillStyle = '#222';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 40px Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  wrapText(ctx, text, canvas.width/2, 180, 1000, 56);
+  if(author){
+    ctx.font = 'italic 30px Inter, system-ui, sans-serif';
+    ctx.fillText(`— ${author}`, canvas.width/2, 520);
+  }
+
+  canvas.toBlob(async blob => {
+    if(!blob) return;
+    try {
+      const file = new File([blob], 'quote.png', { type: 'image/png' });
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file], title: 'Daily Inspiration' }).catch(()=>{});
+      } else {
+        // download fallback
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'quote.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      // older browsers: fallback to data URL download
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quote.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
   });
 }
 
+// Notifications
 function enableNotifications(){
   if(!('Notification' in window)){ alert('Not supported'); return; }
-  Notification.requestPermission().then(p=>{
-    if(p==='granted'){ LS.set('notifications', true); scheduleDailyNotification(); qs('#btn-notify').textContent = '🔔 On'; qs('#btn-notify').setAttribute('aria-pressed','true'); }
+  Notification.requestPermission().then(p => {
+    if(p === 'granted'){ LS.set('notifications', true); scheduleDailyNotification(); const btn = qs('#btn-notify'); if(btn) { btn.textContent = '🔔 On'; btn.setAttribute('aria-pressed','true'); } }
     else alert('Notifications denied');
   });
 }
 
-function scheduleDailyNotification(){
-  if(window._notifyInterval) clearInterval(window._notifyInterval);
-  const msToNext = (hour=9)=>{ const now = new Date(); let t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour); if(now > t) t.setDate(t.getDate()+1); return t - now; };
-  setTimeout(()=>{ sendDailyNotification(); window._notifyInterval = setInterval(sendDailyNotification, 24*60*60*1000); }, msToNext());
+let _notifyTimeoutId = null;
+function scheduleDailyNotification(hour = 9){
+  // clear previous timeout/interval
+  if(_notifyTimeoutId) { clearTimeout(_notifyTimeoutId); _notifyTimeoutId = null; }
+  // time until next target hour (local)
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+  if(now >= target) target.setDate(target.getDate() + 1);
+  const msToNext = target - now;
+  _notifyTimeoutId = setTimeout(() => {
+    sendDailyNotification();
+    // subsequent notifications every 24h
+    _notifyTimeoutId = setInterval(sendDailyNotification, 24 * 60 * 60 * 1000);
+  }, msToNext);
 }
 
 function sendDailyNotification(){
-  const cat = LS.get('lastCategory', state.categories[0]); const items = DB[cat] || []; if(!items.length) return;
-  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/1000/60/60/24);
+  const cat = LS.get('lastCategory', state.categories[0] || 'General');
+  const items = DB[cat] || [];
+  if(!items.length) return;
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0)) / 1000 / 60 / 60 / 24);
   const item = items[dayOfYear % items.length];
-  if('serviceWorker' in navigator && navigator.serviceWorker.controller){ navigator.serviceWorker.controller.postMessage({ type:'show-notification', title:'Daily Inspiration', body: item.text + (item.author?` — ${item.author}`:'') }); }
-  else if(Notification.permission === 'granted'){ new Notification('Daily Inspiration', { body: item.text + (item.author?` — ${item.author}`:'') }); }
+  const body = item.text + (item.author ? ` — ${item.author}` : '');
+  if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({ type: 'show-notification', title: 'Daily Inspiration', body });
+  } else if(Notification.permission === 'granted'){
+    new Notification('Daily Inspiration', { body });
+  }
 }
 
 // --- Swipe gestures for mobile ---
-let touchStartX = 0; let touchEndX = 0; const swipeThreshold = 50;
+let touchStartX = 0, touchEndX = 0;
+const swipeThreshold = 50;
 const touchTarget = qs('#quote-box');
-touchTarget.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive:true });
-touchTarget.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, { passive:true });
-function handleSwipe(){ const dx = touchEndX - touchStartX; if(Math.abs(dx) > swipeThreshold){ if(dx < 0) showNext(); else showPrevious(); } }
+if(touchTarget){
+  touchTarget.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+  touchTarget.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, { passive: true });
+}
+function handleSwipe(){
+  const dx = touchEndX - touchStartX;
+  if(Math.abs(dx) > swipeThreshold){
+    if(dx < 0) showNext();
+    else showPrevious();
+  }
+}
 
+// --- Initialization ---
 function initApp(){
-  // wire up controls
-  qs('#btn-float-next').onclick = showNext; qs('#btn-float-prev').onclick = showPrevious;
-  qs('#btn-share-image').onclick = shareQuoteImage;
-  qs('#btn-notify').onclick = enableNotifications;
-
-  qs('#btn-random').onclick = ()=>{ state.random = !state.random; qs('#btn-random').classList.toggle('fav-active', state.random); LS.set('random', state.random); };}
-  };
-
+  // build UI
   buildCategories();
-  const last = LS.get('lastCategory', state.categories[0] || 'General');
-  if(state.categories.includes(last)) selectCategory(last); else selectCategory(state.categories[0]);
-  renderFavorites();
 
-  document.addEventListener('keydown', e=>{
-    if(e.key===' '){ e.preventDefault(); showNext(); }
-    if(e.key==='s') shareCurrent();
-    if(e.key==='ArrowRight') showNext();
-    if(e.key==='ArrowLeft') showPrevious();
+  // wire up core buttons (if present)
+  const btnNext = qs('#btn-float-next');
+  const btnPrev = qs('#btn-float-prev');
+  const btnShare = qs('#btn-share-image');
+  const btnNotify = qs('#btn-notify');
+
+  if(btnNext) btnNext.addEventListener('click', () => showNext(false));
+  if(btnPrev) btnPrev.addEventListener('click', () => showPrevious(false));
+  if(btnShare) btnShare.addEventListener('click', shareQuoteImage);
+  if(btnNotify) btnNotify.addEventListener('click', enableNotifications);
+
+  // keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    // don't hijack when typing in inputs, etc.
+    const activeIsInput = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
+    if(activeIsInput) return;
+    if(e.key === ' '){
+      e.preventDefault();
+      showNext();
+    } else if(e.key === 's'){
+      // use existing share function
+      shareQuoteImage();
+    } else if(e.key === 'ArrowRight'){
+      showNext();
+    } else if(e.key === 'ArrowLeft'){
+      showPrevious();
+    }
   });
 
-  if(LS.get('notifications', false) && Notification.permission === 'granted'){ qs('#btn-notify').textContent='🔔 On'; qs('#btn-notify').setAttribute('aria-pressed','true'); scheduleDailyNotification(); }
+  // restore UI state: random toggle (if you add a UI element for it later)
+  const persistedRandom = LS.get('random', false);
+  state.random = !!persistedRandom;
 
-  // register service worker relative to this file
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').catch(e=>console.warn('SW failed', e)); }
+  // restore last category (if present), else pick first available
+  const persistedLast = LS.get('lastCategory', null);
+  const lastToUse = (persistedLast && state.categories.includes(persistedLast)) ? persistedLast : (state.categories[0] || 'General');
+  if(lastToUse) selectCategory(lastToUse);
 
-  // handle install prompt
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', e=>{
-    e.preventDefault(); deferredPrompt = e;
-    const btn = document.createElement('button'); btn.textContent = 'Install App'; btn.className = 'small btn-ghost';
-    btn.onclick = async ()=>{ btn.remove(); deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; };
-    document.querySelector('header').appendChild(btn);
-  });
-
-  // splash hide with transitionend
+  // splash hide
   const splash = qs('#splash');
-  requestAnimationFrame(()=> splash.classList.add('hidden-splash'));
-  splash.addEventListener('transitionend', ()=> { try{ splash.remove(); }catch(e){} });
+  if(splash){
+    requestAnimationFrame(()=> splash.classList.add('hidden-splash'));
+    splash.addEventListener('transitionend', () => { try { splash.remove(); } catch (e) {} });
+  }
 
-  // load persisted UI state
-  const persistedRandom = LS.get('random', false); if(persistedRandom){ state.random = true; qs('#btn-random').classList.add('fav-active'); }
+  // service worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./service-worker.js').catch(e => console.warn('SW failed', e));
+  }
+
+  // schedule notification if previously enabled
+  if(LS.get('notifications', false) && Notification.permission === 'granted'){
+    scheduleDailyNotification();
+    if(btnNotify){ btnNotify.textContent = '🔔 On'; btnNotify.setAttribute('aria-pressed','true'); }
+  }
 }
 
 </script>
 
 </body>
 </html>
+
 
 
 
