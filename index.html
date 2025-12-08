@@ -307,25 +307,16 @@ function handleSwipe(){ const dx = touchEndX - touchStartX; if (Math.abs(dx) > s
 function initApp(){
   qs('#float-next').onclick=showNext;
   qs('#float-prev').onclick=showPrevious;
+ 
   buildCategories();
   const last=LS.get('lastCategory',state.categories[0]); selectCategory(last);
   renderFavorites();
-
-  
-  
-  
   
   qs('#btn-notify').onclick=enableNotifications;
-   qs('#btn-auto').textContent=autoMode?'Auto On':'Auto Off';
-    if(autoMode){autoInterval=setInterval(showNext,8000);} else clearInterval(autoInterval);
-  };
   qs('#btn-share').onclick=shareCurrent;
-  
-  qs('#btn-float-next').onclick=showNext;
 
   document.addEventListener('keydown',e=>{
     if(e.key===' '){e.preventDefault();showNext();}
-    if(e.key==='f') toggleFavorite();
     if(e.key==='s') shareCurrent();
   });
 
@@ -360,3 +351,4 @@ footer{position:fixed;bottom:0;left:0;width:100%;background:transparent;padding:
 </style>
 </body>
 </html>
+
