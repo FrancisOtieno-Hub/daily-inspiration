@@ -66,7 +66,6 @@
     <div class="header-controls">
       <button id="btn-share" class="small" title="Share current">Share</button>
       <button id="btn-notify" class="small">Enable Notifications</button>
-      <input id="search" placeholder="Search…" class="search">
     </div>
   </header>
 
@@ -80,14 +79,14 @@
 
       <div class="meta">
         <div class="favorites">
-          <button id="btn-random" class="small btn-ghost">Next</button>
+          <button id="btn-next" class="small btn-ghost">Next</button>
+          <button id="btn-prev" class="small btn-ghost">Previous</button>
           <button id="btn-fav" class="small">★ Favorite</button>
         </div>
         <div id="progress" style="font-size:0.9rem;color:var(--muted)">0 / 0</div>
       </div>
 
       <div class="controls">
-        <button id="btn-show-list" class="btn-ghost small">View All</button>
         <button id="btn-export" class="small">Export Favorites</button>
         <button id="btn-auto" class="small btn-ghost">Auto Off</button>
         <button id="btn-share-img" class="small btn-ghost">Share as Image</button>
@@ -100,16 +99,8 @@
     </div>
   </section>
 
-  <section id="all-panel" class="card" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="margin:0;font-size:1rem">All Items</h2>
-      <button id="btn-close-list" class="btn-ghost small">Close</button>
-    </div>
-    <div id="all-items" style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
-  </section>
-
   <footer style="margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center">
-    Built with care • Offline ready • Customize categories in code or backend
+    copyright Francis Otieno
   </footer>
 </main>
 
@@ -144,6 +135,33 @@
       setTimeout(()=>{quoteEl.textContent=item.text;authorEl.textContent=item.author?`— ${item.author}`:'';quoteEl.classList.remove('fade');authorEl.classList.remove('fade');updateCategoryUI();},300);
     } else {quoteEl.textContent=item.text;authorEl.textContent=item.author?`— ${item.author}`:'';updateCategoryUI();}
   }
+
+   function showPrevious(skipFade=false){
+  if(!state.pool || state.pool.length === 0){
+    quoteEl.textContent='No items in this category.';
+    authorEl.textContent='';
+    progressEl.textContent='0 / 0';
+    return;
+  }
+  state.index--; // Move back
+  if(state.index < 0) state.index = state.pool.length - 1; // Loop to last
+  const item = state.pool[state.index];
+  if(!skipFade){
+    quoteEl.classList.add('fade');
+    authorEl.classList.add('fade');
+    setTimeout(()=>{
+      quoteEl.textContent = item.text;
+      authorEl.textContent = item.author ? `— ${item.author}` : '';
+      quoteEl.classList.remove('fade');
+      authorEl.classList.remove('fade');
+      updateCategoryUI();
+    }, 300);
+  } else {
+    quoteEl.textContent = item.text;
+    authorEl.textContent = item.author ? `— ${item.author}` : '';
+    updateCategoryUI();
+  }
+}
 
   function getFavorites(){return LS.get('favorites',[]);}
   function toggleFavorite(){const cur={text:quoteEl.textContent,author:authorEl.textContent.replace(/^—\s?/,'') ,category:state.active};
@@ -236,7 +254,8 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
 
   function initApp(){
     buildCategories();const last=LS.get('lastCategory',state.categories[0]);selectCategory(last);renderFavorites();
-    qs('#btn-random').onclick=()=>showNext();qs('#btn-fav').onclick=toggleFavorite;qs('#btn-share').onclick=shareCurrent;
+    qs('#btn-next').onclick = () => showNext();
+    qs('#btn-prev').onclick = () => showPrevious();
     qs('#btn-export').onclick=exportFavorites;qs('#btn-show-list').onclick=renderAllItems;qs('#btn-close-list').onclick=()=>qs('#all-panel').style.display='none';
     qs('#btn-notify').onclick=enableNotifications;qs('#btn-auto').onclick=()=>{autoMode=!autoMode;qs('#btn-auto').textContent=autoMode?'Auto On':'Auto Off';};
     qs('#btn-share-img').onclick = shareQuoteImage;
@@ -256,3 +275,4 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
 </script>
 </body>
 </html>
+
