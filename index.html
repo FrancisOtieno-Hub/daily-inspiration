@@ -71,7 +71,6 @@
   </header>
 
   <section class="card">
-    <input type="text" id="search" placeholder="Search quotes…">
     <div class="categories" id="categories" role="tablist" aria-label="Categories"></div>
     <div class="quote-area">
       <div id="quote-box" class="quote-box">
@@ -102,7 +101,7 @@
   </section>
 
   <footer style="margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center">
-    copyright Francis Otieno
+    &copy; Francis Otieno
   </footer>
 </main>
 
@@ -117,7 +116,6 @@ fetch('quotes.json').then(r=>r.json()).then(data=>{Object.assign(DB,data);state.
 
 const quoteEl=qs('#quote'), authorEl=qs('#author'), progressEl=qs('#progress');
 const categoriesEl=qs('#categories'), favPanel=qs('#favorites-panel'), favList=qs('#fav-list');
-const searchEl=qs('#search');
 
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
 
@@ -306,11 +304,6 @@ function initApp(){
   qs('#btn-share').onclick=shareCurrent;
   qs('#btn-share-img').onclick=shareQuoteImage;
 
-  searchEl.oninput=e=>{
-    const q=e.target.value.toLowerCase();
-    qsa('.chip').forEach(el=>el.style.display=el.title.toLowerCase().includes(q)?'':'none');
-  };
-
   document.addEventListener('keydown',e=>{
     if(e.key===' '){e.preventDefault();showNext();}
     if(e.key==='f') toggleFavorite();
@@ -339,6 +332,7 @@ function initApp(){
 </script>
 </body>
 </html>
+
 
 
 
