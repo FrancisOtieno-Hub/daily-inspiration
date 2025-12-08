@@ -98,9 +98,8 @@
       </div>
     </div>
     <div class="header-controls">
-      <button id="btn-share" class="small" title="Share current">📤 Share</button>
-      <button id="btn-share-image" class="small" title="Share image">🖼️ Image</button>
-      <button id="btn-notify" class="small" aria-pressed="false">🔔 Notify</button>
+      <button id="btn-share-image" class="small" title="Share image">Share Quote</button>
+      <button id="btn-notify" class="small" aria-pressed="false">Enable Notification</button>
     </div>
   </header>
 
@@ -112,24 +111,7 @@
         <p id="author" class="author"></p>
       </div>
 
-      <div class="meta">
-        <div class="favorites">
-          <button id="btn-prev" class="small" aria-label="Previous quote">⟵ Prev</button>
-          <button id="btn-fav" class="small btn-ghost" aria-pressed="false" title="Toggle favorite">★ Favorite</button>
-          <button id="btn-next" class="small" aria-label="Next quote">Next ⟶</button>
-        </div>
         <div id="progress" style="font-size:0.9rem;color:var(--muted)">0 / 0</div>
-      </div>
-
-      <div class="controls" style="justify-content:center">
-        <button id="btn-random" class="small btn-ghost" title="Random mode">🔀 Random</button>
-        <button id="btn-autoplay" class="small" title="Autoplay">▶ Auto</button>
-        <button id="btn-export" class="small btn-ghost" title="Export favorites">⬇ Export</button>
-      </div>
-
-      <div id="favorites-panel" style="display:none;margin-top:10px;">
-        <div style="font-weight:700;margin-bottom:8px">Favorites</div>
-        <div class="fav-list" id="fav-list"></div>
       </div>
     </div>
   </section>
@@ -139,17 +121,10 @@
   </footer>
 </main>
 
-<button id="btn-float-next" aria-label="Next Quote">⟶</button>
-<button id="btn-float-prev" aria-label="Previous Quote">⟵</button>
+<button id="btn-float-next" aria-label="Next Quote">Next</button>
+<button id="btn-float-prev" aria-label="Previous Quote">Prev</button>
 
 <script>
-/* Cleaned, corrected and improved app.js embedded for convenience.
-   - Fixed ID mismatches, added missing controls, accessibility improvements
-   - Autoplay, random mode, share image, export, favorites indicator
-   - Splash uses transitionend to remove element
-   - Service worker registration path adjusted to relative
-*/
-
 const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false };
 let autoMode = false, autoInterval = null;
 
@@ -238,48 +213,6 @@ function displayQuote(item, skipFade){
   }
 }
 
-function getFavorites(){ return LS.get('favorites', []); }
-function toggleFavorite(){
-  const cur = { text: quoteEl.textContent, author: authorEl.textContent.replace(/^—\s?/,'') , category: state.active };
-  const favs = getFavorites();
-  const idx = favs.findIndex(f=>f.text===cur.text && f.author===cur.author);
-  if(idx>=0) favs.splice(idx,1); else favs.unshift(cur);
-  LS.set('favorites', favs); renderFavorites(); updateFavButtonState();
-}
-function updateFavButtonState(){
-  const btn = qs('#btn-fav'); if(!btn) return;
-  const favs = getFavorites(); const curText = quoteEl.textContent; const curAuthor = authorEl.textContent.replace(/^—\s?/,'');
-  const exists = favs.some(f=>f.text===curText && f.author===curAuthor);
-  btn.classList.toggle('fav-active', exists);
-  btn.setAttribute('aria-pressed', String(exists));
-}
-
-function renderFavorites(){
-  const favs = getFavorites(); favList.innerHTML = '';
-  if(!favs.length){ favPanel.style.display = 'none'; return; }
-  favPanel.style.display = 'block';
-  favs.forEach(f=>{
-    const chip = document.createElement('button');
-    chip.className = 'chip'; chip.textContent = f.text.length>80? f.text.slice(0,80)+'…' : f.text;
-    chip.title = (f.author?f.author+': ':'') + f.text; chip.setAttribute('tabindex','0');
-    chip.addEventListener('click', ()=>{ quoteEl.textContent = f.text; authorEl.textContent = f.author? `— ${f.author}` : ''; updateCategoryUI(); updateFavButtonState(); });
-    favList.appendChild(chip);
-  });
-}
-
-function shareCurrent(){
-  const text = quoteEl.textContent + (authorEl.textContent? ' ' + authorEl.textContent : '');
-  if(navigator.share){ navigator.share({ text, title:'Daily Inspiration' }).catch(()=>{}); }
-  else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>alert('Copied!')).catch(()=>alert('Could not copy')); }
-  else prompt('Copy the quote:', text);
-}
-
-function exportFavorites(){
-  const favs = getFavorites(); if(!favs.length){ alert('No favorites to export.'); return; }
-  const blob = new Blob([ favs.map(f=>`"${f.text.replace(/"/g,'\\"')}" — ${f.author}`).join('\n\n') ], { type:'text/plain' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'favorites.txt'; a.click(); URL.revokeObjectURL(url);
-}
-
 function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   const words = text.split(' '); let line = '', lines = [];
   for(let n=0;n<words.length;n++){
@@ -338,15 +271,11 @@ function handleSwipe(){ const dx = touchEndX - touchStartX; if(Math.abs(dx) > sw
 
 function initApp(){
   // wire up controls
-  qs('#btn-next').onclick = showNext; qs('#btn-prev').onclick = () => showPrevious();
   qs('#btn-float-next').onclick = showNext; qs('#btn-float-prev').onclick = showPrevious;
-  qs('#btn-fav').onclick = toggleFavorite; qs('#btn-share').onclick = shareCurrent; qs('#btn-share-image').onclick = shareQuoteImage;
-  qs('#btn-export').onclick = exportFavorites; qs('#btn-notify').onclick = enableNotifications;
+  qs('#btn-share-image').onclick = shareQuoteImage;
+  qs('#btn-notify').onclick = enableNotifications;
 
-  qs('#btn-random').onclick = ()=>{ state.random = !state.random; qs('#btn-random').classList.toggle('fav-active', state.random); LS.set('random', state.random); };
-  qs('#btn-autoplay').onclick = ()=>{
-    autoMode = !autoMode; qs('#btn-autoplay').textContent = autoMode ? '⏸ Auto' : '▶ Auto';
-    if(autoMode){ autoInterval = setInterval(showNext, 5000); } else { clearInterval(autoInterval); }
+  qs('#btn-random').onclick = ()=>{ state.random = !state.random; qs('#btn-random').classList.toggle('fav-active', state.random); LS.set('random', state.random); };}
   };
 
   buildCategories();
@@ -388,6 +317,7 @@ function initApp(){
 
 </body>
 </html>
+
 
 
 
