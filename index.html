@@ -2,50 +2,81 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Daily Inspiration — Multi‑Category PWA</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f57c00">
 <style>
   :root {
-    --bg1:#ffecd2; --bg2:#fcb69f; --card:rgba(255,255,255,0.92);
-    --accent:#f57c00; --muted:#6b6b6b; --glass:rgba(255,255,255,0.6); --radius:14px;
+    --bg1:#ffecd2; --bg2:#fcb69f; --card:rgba(255,255,255,0.96);
+    --accent:#f57c00; --muted:#6b6b6b; --glass:rgba(255,255,255,0.6); --radius:16px;
     font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;
   }
-  *,*::before,*::after{box-sizing:border-box;}
-  html,body{height:100%;margin:0;display:flex;align-items:center;justify-content:center;padding:20px;
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%;margin:0;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top,20px) env(safe-area-inset-right,20px) env(safe-area-inset-bottom,20px) env(safe-area-inset-left,20px);
   background:linear-gradient(135deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased;color:#222;}
-  .app{width:100%;max-width:900px;padding:20px;display:flex;flex-direction:column;gap:18px;}
-  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-  .brand{display:flex;align-items:center;gap:12px;}
-  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,#fff,#fee9d6);
-  display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);
-  box-shadow:0 6px 18px rgba(0,0,0,0.08);}
-  h1{font-size:1.15rem;margin:0;} p.lead{margin:0;color:var(--muted);font-size:0.95rem;}
-  .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 8px 28px rgba(0,0,0,0.08);}
-  .categories{display:flex;gap:8px;flex-wrap:wrap;}
-  .cat{color:#222;background:var(--glass);padding:8px 12px;border-radius:12px;cursor:pointer;
-  border:1px solid rgba(0,0,0,0.04);font-weight:600;}
-  .cat.active{background:#fff;border-color:rgba(0,0,0,0.08);box-shadow:0 6px 14px rgba(0,0,0,0.06);}
-  .quote-area{display:flex;flex-direction:column;gap:12px;}
-  .quote-box{padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.92));
-  box-shadow:0 4px 16px rgba(0,0,0,0.05);max-height:250px;overflow-y:auto;}
-  .quote-text{font-size:1.35rem;line-height:1.4;margin:0;transition:opacity .3s,transform .3s;}
-  .author{font-weight:700;color:var(--muted);text-align:right;transition:opacity .3s,transform .3s;}
-  .fade{opacity:0;transform:translateY(6px);}
-  .controls,.favorites{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;}
-  button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700;}
+
+  .app{width:100%;max-width:900px;padding:24px;display:flex;flex-direction:column;gap:18px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,#fff,#fee9d6);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 8px 22px rgba(0,0,0,0.08)}
+  h1{font-size:1.15rem;margin:0}
+  p.lead{margin:0;color:var(--muted);font-size:0.95rem}
+
+  .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 10px 32px rgba(0,0,0,0.08)}
+
+  /* Categories: horizontally scrollable on mobile */
+  .categories{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+  .categories::-webkit-scrollbar{display:none}
+  .cat{color:#222;background:var(--glass);padding:8px 12px;border-radius:12px;cursor:pointer;border:1px solid rgba(0,0,0,0.04);font-weight:600;white-space:nowrap}
+  .cat.active{background:#fff;border-color:rgba(0,0,0,0.08);box-shadow:0 8px 18px rgba(0,0,0,0.06)}
+
+  .quote-area{display:flex;flex-direction:column;gap:12px}
+  .quote-box{padding:26px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,0.99),rgba(255,255,255,0.94));box-shadow:0 6px 22px rgba(0,0,0,0.06);max-height:60vh;overflow:auto}
+
+  .quote-text{font-size:1.45rem;line-height:1.45;margin:0;transition:opacity .28s ease,transform .28s ease}
+  .author{font-weight:700;color:var(--muted);text-align:right;margin-top:8px;transition:opacity .28s ease,transform .28s ease}
+
+  /* entrance state for animation */
+  .enter{opacity:0;transform:translateY(8px)}
+
+  .controls,.favorites{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:700}
   .btn-ghost{background:transparent;color:var(--accent);border:2px solid rgba(255,255,255,0.5);}
-  .small{padding:8px 10px;font-size:0.95rem;}
-  .meta{display:flex;gap:12px;align-items:center;justify-content:space-between;}
-  .fav-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-  .chip{background:#fff;padding:6px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);font-size:0.9rem;cursor:pointer;}
-  #splash{position:fixed;width:100%;height:100%;background:linear-gradient(to right,#ffecd2,#fcb69f);
-  display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;opacity:1;transition:opacity 1s ease;}
-  #splash img{width:120px;height:120px;margin-bottom:20px;}
-  #splash h1{font-size:2rem;color:#fff;text-shadow:1px 1px 5px rgba(0,0,0,0.2);}
-  #search{padding:8px 12px;border-radius:10px;border:1px solid #ccc;width:100%;margin-bottom:12px;font-size:1rem;}
-  @media (max-width:600px){.quote-text{font-size:1.05rem;}.logo{width:48px;height:48px;}}
+  .small{padding:10px 12px;font-size:1rem;border-radius:12px}
+  .meta{display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .fav-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{background:#fff;padding:8px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);font-size:0.95rem;cursor:pointer}
+
+  /* Splash */
+  #splash{position:fixed;left:0;top:0;width:100%;height:100%;background:linear-gradient(to right,#ffecd2,#fcb69f);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;opacity:1;transition:opacity 600ms ease,transform 600ms ease}
+  #splash img{width:120px;height:120px;margin-bottom:18px}
+  #splash h1{font-size:2rem;color:#fff;text-shadow:1px 1px 6px rgba(0,0,0,0.2)}
+  .hidden-splash{opacity:0;transform:scale(1.05)}
+
+  /* Floating next button for mobile */
+  #btn-float-next{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));right:20px;padding:14px 18px;border-radius:50px;background:var(--accent);color:#fff;font-weight:800;border:none;box-shadow:0 8px 26px rgba(0,0,0,0.16);z-index:999}
+
+  /* smaller screens */
+  @media (max-width:600px){
+    .app{padding:16px}
+    .logo{width:48px;height:48px}
+    .quote-text{font-size:1.15rem;line-height:1.55}
+    .author{font-size:1rem}
+    .card{padding:18px}
+    .quote-box{padding:18px;border-radius:14px}
+    button.small{padding:12px 14px;font-size:0.98rem}
+    /* hide float on wide screens */
+    #btn-float-next{display:block}
+  }
+  @media (min-width:601px){
+    #btn-float-next{display:none}
+  }
+
+  /* accessibility focus */
+  .cat:focus, button:focus, .chip:focus{outline:3px solid rgba(245,124,0,0.18);outline-offset:3px}
+
+  footer{margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center}
 </style>
 </head>
 <body>
@@ -65,32 +96,32 @@
       </div>
     </div>
     <div class="header-controls">
-      <button id="btn-share" class="small" title="Share current">Share</button>
-      <button id="btn-notify" class="small">Enable Notifications</button>
+      <button id="btn-share" class="small" title="Share current">📤 Share</button>
+      <button id="btn-notify" class="small">🔔 Notify</button>
     </div>
   </header>
 
   <section class="card">
     <div class="categories" id="categories" role="tablist" aria-label="Categories"></div>
     <div class="quote-area">
-      <div id="quote-box" class="quote-box">
-        <p id="quote" class="quote-text" aria-live="polite">Loading…</p>
+      <div id="quote-box" class="quote-box" aria-live="polite">
+        <p id="quote" class="quote-text">Loading…</p>
         <p id="author" class="author"></p>
       </div>
 
       <div class="meta">
         <div class="favorites">
-          <button id="btn-prev" class="small btn-ghost" aria-label="Previous Quote">Previous</button>
-          <button id="btn-next" class="small btn-ghost" aria-label="Next Quote">Next</button>
+          <button id="btn-prev" class="small btn-ghost" aria-label="Previous Quote">◀ Prev</button>
+          <button id="btn-next" class="small btn-ghost" aria-label="Next Quote">Next ▶</button>
           <button id="btn-fav" class="small" aria-label="Favorite Quote">★ Favorite</button>
         </div>
         <div id="progress" style="font-size:0.9rem;color:var(--muted)">0 / 0</div>
       </div>
 
       <div class="controls">
-        <button id="btn-export" class="small">Export Favorites</button>
+        <button id="btn-export" class="small">Export</button>
         <button id="btn-auto" class="small btn-ghost">Auto Off</button>
-        <button id="btn-share-img" class="small btn-ghost">Share as Image</button>
+        <button id="btn-share-img" class="small btn-ghost">🖼️ Image</button>
       </div>
 
       <div id="favorites-panel" style="display:none;margin-top:10px;">
@@ -100,10 +131,12 @@
     </div>
   </section>
 
-  <footer style="margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center">
+  <footer>
     &copy; Francis Otieno
   </footer>
 </main>
+
+<button id="btn-float-next" aria-label="Next Quote">Next</button>
 
 <script>
 const DB = {}, state = { categories: [], active: null, pool: [], index: 0 };
@@ -112,7 +145,7 @@ let autoMode=false, autoInterval;
 const qs=s=>document.querySelector(s), qsa=s=>Array.from(document.querySelectorAll(s));
 const LS={get:(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch(e){return f}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
-fetch('quotes.json').then(r=>r.json()).then(data=>{Object.assign(DB,data);state.categories=Object.keys(DB);initApp();});
+fetch('quotes.json').then(r=>r.json()).then(data=>{Object.assign(DB,data);state.categories=Object.keys(DB);initApp();}).catch(e=>{console.warn('quotes load failed',e);state.categories=['General'];DB['General']=[{text:'Welcome — add quotes.json to get started',author:'App'}];initApp();});
 
 const quoteEl=qs('#quote'), authorEl=qs('#author'), progressEl=qs('#progress');
 const categoriesEl=qs('#categories'), favPanel=qs('#favorites-panel'), favList=qs('#fav-list');
@@ -162,22 +195,23 @@ function showPrevious(skipFade=false){
 }
 
 function displayQuote(item, skipFade){
+  // entrance animation: add enter state, then update text and remove enter to animate in
   if(!skipFade){
-    quoteEl.classList.add('fade'); authorEl.classList.add('fade');
+    quoteEl.classList.add('enter'); authorEl.classList.add('enter');
     setTimeout(()=>{
       quoteEl.textContent=item.text;
       authorEl.textContent=item.author?`— ${item.author}`:'';
-      quoteEl.classList.remove('fade'); authorEl.classList.remove('fade');
+      // force reflow before removing class for a smoother animation
+      void quoteEl.offsetWidth;
+      quoteEl.classList.remove('enter'); authorEl.classList.remove('enter');
       updateCategoryUI();
-    },300);
+    },120);
   } else {
-    quoteEl.textContent=item.text;
-    authorEl.textContent=item.author?`— ${item.author}`:'';
-    updateCategoryUI();
+    quoteEl.textContent=item.text; authorEl.textContent=item.author?`— ${item.author}`:''; updateCategoryUI();
   }
 }
 
-function getFavorites(){return LS.get('favorites',[]);}
+function getFavorites(){return LS.get('favorites',[]);} 
 function toggleFavorite(){
   const cur={text:quoteEl.textContent,author:authorEl.textContent.replace(/^—\s?/,'') ,category:state.active};
   const favs=getFavorites();
@@ -201,8 +235,8 @@ function renderFavorites(){
 
 function shareCurrent(){
   const text=quoteEl.textContent+(authorEl.textContent?' '+authorEl.textContent:'');
-  if(navigator.share){navigator.share({text,title:'Daily Inspiration'});}
-  else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>alert('Copied!'));}
+  if(navigator.share){navigator.share({text,title:'Daily Inspiration'}).catch(()=>{});} 
+  else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>alert('Copied!')).catch(()=>alert('Could not copy'));} 
   else prompt('Copy the quote:',text);
 }
 
@@ -224,15 +258,15 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
 
 function shareQuoteImage(){
   const text=quoteEl.textContent, author=authorEl.textContent.replace(/^—\s?/,'');
-  const canvas=document.createElement('canvas'); canvas.width=800; canvas.height=450;
+  const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=675;
   const ctx=canvas.getContext('2d');
   const grad=ctx.createLinearGradient(0,0,canvas.width,canvas.height); grad.addColorStop(0,'#ffecd2'); grad.addColorStop(1,'#fcb69f'); ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='#222'; ctx.textAlign='center'; ctx.font='bold 32px Inter, sans-serif';
-  wrapText(ctx,text,canvas.width/2,150,700,40);
-  if(author){ctx.font='italic 24px Inter, sans-serif'; ctx.fillText(`— ${author}`,canvas.width/2,350);}
+  ctx.fillStyle='#222'; ctx.textAlign='center'; ctx.font='bold 40px Inter, sans-serif';
+  wrapText(ctx,text,canvas.width/2,200,1000,56);
+  if(author){ctx.font='italic 30px Inter, sans-serif'; ctx.fillText(`— ${author}`,canvas.width/2,520);}
   canvas.toBlob(async blob=>{
     if(navigator.canShare && navigator.canShare({files:[new File([blob],'quote.png',{type:'image/png'})]})){
-      navigator.share({files:[new File([blob],'quote.png',{type:'image/png'})], title:'Daily Inspiration'});
+      navigator.share({files:[new File([blob],'quote.png',{type:'image/png'})], title:'Daily Inspiration'}).catch(()=>{});
     } else {
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='quote.png'; a.click(); URL.revokeObjectURL(url);
     }
@@ -242,7 +276,7 @@ function shareQuoteImage(){
 function enableNotifications(){
   if(!('Notification' in window)){alert('Not supported'); return;}
   Notification.requestPermission().then(p=>{
-    if(p==='granted'){LS.set('notifications',true); scheduleDailyNotification(); qs('#btn-notify').textContent='Notifications: On';}
+    if(p==='granted'){LS.set('notifications',true); scheduleDailyNotification(); qs('#btn-notify').textContent='🔔 On';}
     else alert('Notifications denied');
   });
 }
@@ -266,34 +300,18 @@ function sendDailyNotification(){
 }
 
 // --- Swipe gestures for mobile ---
-let touchStartX = 0;
-let touchEndX = 0;
-const swipeThreshold = 50; // minimum px to consider a swipe
-
-quoteEl.parentElement.addEventListener('touchstart', e => {
-  touchStartX = e.changedTouches[0].screenX;
-});
-
-quoteEl.parentElement.addEventListener('touchend', e => {
-  touchEndX = e.changedTouches[0].screenX;
-  handleSwipe();
-});
-
-function handleSwipe() {
-  const dx = touchEndX - touchStartX;
-  if (Math.abs(dx) > swipeThreshold) {
-    if (dx < 0) showNext();       // swipe left → next quote
-    else showPrevious();           // swipe right → previous quote
-  }
-}
+let touchStartX = 0; let touchEndX = 0; const swipeThreshold = 50;
+quoteEl.parentElement.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+quoteEl.parentElement.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
+function handleSwipe(){ const dx = touchEndX - touchStartX; if (Math.abs(dx) > swipeThreshold) { if (dx < 0) showNext(); else showPrevious(); } }
   
 function initApp(){
   buildCategories();
   const last=LS.get('lastCategory',state.categories[0]); selectCategory(last);
   renderFavorites();
 
-  qs('#btn-next').onclick=showNext;
-  qs('#btn-prev').onclick=showPrevious;
+  qs('#btn-next').onclick=()=>showNext();
+  qs('#btn-prev').onclick=()=>showPrevious();
   qs('#btn-fav').onclick=toggleFavorite;
   qs('#btn-export').onclick=exportFavorites;
   qs('#btn-notify').onclick=enableNotifications;
@@ -303,6 +321,7 @@ function initApp(){
   };
   qs('#btn-share').onclick=shareCurrent;
   qs('#btn-share-img').onclick=shareQuoteImage;
+  qs('#btn-float-next').onclick=showNext;
 
   document.addEventListener('keydown',e=>{
     if(e.key===' '){e.preventDefault();showNext();}
@@ -311,7 +330,7 @@ function initApp(){
   });
 
   if(LS.get('notifications',false)&&Notification.permission==='granted'){
-    qs('#btn-notify').textContent='Notifications: On'; scheduleDailyNotification();
+    qs('#btn-notify').textContent='🔔 On'; scheduleDailyNotification();
   }
 
   if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js').catch(e=>console.warn('SW failed',e));}
@@ -320,19 +339,14 @@ function initApp(){
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault(); deferredPrompt=e;
     const btn=document.createElement('button'); btn.textContent="Install App"; btn.className="small btn-ghost";
-    btn.onclick=async()=>{
-      btn.remove(); deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
-    };
+    btn.onclick=async()=>{ btn.remove(); deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; };
     document.querySelector('header').appendChild(btn);
   });
 
-  setTimeout(()=>qs('#splash').style.opacity=0,500);
-  setTimeout(()=>qs('#splash').style.display='none',1500);
+  // splash hide with subtle scale
+  setTimeout(()=>qs('#splash').classList.add('hidden-splash'),400);
+  setTimeout(()=>qs('#splash').style.display='none',1100);
 }
 </script>
 </body>
 </html>
-
-
-
-
