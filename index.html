@@ -10,20 +10,12 @@
   :root {
     --bg1:#ffecd2; --bg2:#fcb69f; --card:rgba(255,255,255,0.96);
     --accent:#f57c00; --muted:#6b6b6b; --glass:rgba(255,255,255,0.6); --radius:16px;
-    --control-height:42px; /* unified control height for header buttons and category chips */
     font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{height:100%;margin:0;padding:0;display:block;width:100%;max-width:100vw;overflow-x:hidden;background:linear-gradient(135deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased;color:#222;}
 
-  /* Make body a column flex so footer can stick to bottom */
-  body{
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-  }
-
-  .app{width:100%;max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:18px;flex:1;}
+  .app{width:100%;max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:18px;}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
   .brand{display:flex;align-items:center;gap:12px}
   .logo{width:56px;height:56px;border-radius:50%;background:linear-gradient(180deg,#fff,#fee9d6);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 8px 22px rgba(0,0,0,0.08);backdrop-filter:saturate(180%) blur(8px);}
@@ -35,21 +27,7 @@
   /* Categories: horizontally scrollable on mobile */
   .categories{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none; scroll-snap-type:x mandatory}
   .categories::-webkit-scrollbar{display:none}
-  .cat{
-    color:#222;
-    background:rgba(245,124,0,0.12);
-    padding:8px 12px;
-    border-radius:12px;
-    cursor:pointer;
-    border:1px solid rgba(245,124,0,0.12);
-    font-weight:600;
-    scroll-snap-align:start;
-
-    /* unify height to match header buttons */
-    height: var(--control-height);
-    display:flex;
-    align-items:center;
-  }
+  .cat{color:#222;background:rgba(245,124,0,0.12);padding:8px 12px;border-radius:12px;cursor:pointer;border:1px solid rgba(245,124,0,0.12);font-weight:600;scroll-snap-align:start}
   .cat.active{background:#fff;border-color:rgba(0,0,0,0.08);box-shadow:0 8px 18px rgba(0,0,0,0.06)}
 
   .quote-area{display:flex;flex-direction:column;gap:12px}
@@ -62,15 +40,9 @@
   .enter{opacity:0;transform:translateY(8px)}
 
   .controls,.favorites{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
-  button{
-    background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:700;
-    height: var(--control-height);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
+  button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:700}
   .btn-ghost{background:transparent;color:var(--accent);border:2px solid rgba(255,255,255,0.5);}
-  .small{padding:0 12px;font-size:1rem;border-radius:12px;height:var(--control-height)}
+  .small{padding:10px 12px;font-size:1rem;border-radius:12px}
   .meta{display:flex;gap:12px;align-items:center;justify-content:space-between}
   .fav-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   .chip{background:#fff;padding:8px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);font-size:0.95rem;cursor:pointer}
@@ -95,22 +67,19 @@
     .author{font-size:1rem}
     .card{padding:18px}
     .quote-box{padding:18px;border-radius:14px}
-    button.small{padding:0 14px;font-size:0.98rem}
+    button.small{padding:12px 14px;font-size:0.98rem}
     /* show float on mobile */
     #btn-float-next,#btn-float-prev{display:block}
   }
   @media (min-width:601px){
-    /* keep mobile float buttons hidden on larger view unless you want them visible there */
     #btn-float-next,#btn-float-prev{display:none}
   }
 
   /* accessibility focus */
   .cat:focus, button:focus, .chip:focus{outline:3px solid rgba(245,124,0,0.18);outline-offset:3px}
 
-  /* keep footer pinned to bottom of page */
-  footer{margin-top:auto;color:var(--muted);font-size:0.9rem;text-align:center;padding:8px 0}
+  footer{margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center}
 </style>
-
 </head>
 <body>
 
@@ -156,12 +125,6 @@
 <button id="btn-float-prev" aria-label="Previous Quote">Prev</button>
 
 <script>
-/* Daily Inspiration — cleaned / fixed script
-   - Ensures Prev button is wired
-   - Guards missing DOM nodes
-   - Progress & prev/next logic fixed
-*/
-
 const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false };
 const qs = s => document.querySelector(s), qsa = s => Array.from(document.querySelectorAll(s));
 const LS = {
@@ -179,6 +142,7 @@ const LS = {
 
 let autoMode = false, autoInterval = null;
 
+// Elements we expect (guarded usage)
 const quoteEl = qs('#quote'), authorEl = qs('#author'), progressEl = qs('#progress');
 const categoriesEl = qs('#categories');
 
@@ -190,7 +154,7 @@ function shuffle(arr){
   }
 }
 
-// load quotes.json with fallback
+// --- fetch quotes.json with fallback ---
 (async function loadQuotes(){
   try{
     const r = await fetch('quotes.json');
@@ -206,6 +170,7 @@ function shuffle(arr){
   }
 })();
 
+// Build categories as accessible tabs
 function buildCategories(){
   if(!categoriesEl) return;
   categoriesEl.innerHTML = '';
@@ -215,11 +180,12 @@ function buildCategories(){
     btn.textContent = cat;
     btn.setAttribute('role', 'tab');
     btn.setAttribute('aria-selected', 'false');
-    btn.setAttribute('tabindex', i === 0 ? '0' : '-1');
+    btn.setAttribute('tabindex', i === 0 ? '0' : '-1'); // only first is in tab order initially
     btn.id = `tab-${i}`;
     btn.setAttribute('aria-controls', 'quote-box');
     btn.addEventListener('click', () => selectCategory(cat));
     btn.addEventListener('keydown', (e) => {
+      // Arrow navigation between categories
       if(e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End'){
         e.preventDefault();
         const all = qsa('.cat');
@@ -240,6 +206,7 @@ function buildCategories(){
   });
 }
 
+// Select a category and prepare pool
 function selectCategory(cat){
   state.active = cat;
   state.pool = Array.isArray(DB[cat]) ? [...DB[cat]] : [];
@@ -252,6 +219,7 @@ function selectCategory(cat){
   }
   if(state.random) shuffle(state.pool);
   state.index = 0;
+  // show first item immediately (consistent)
   displayCurrent(true);
   updateCategoryUI();
   LS.set('lastCategory', cat);
@@ -264,6 +232,7 @@ function renderEmpty(){
 }
 
 function updateCategoryUI(){
+  // update active class and aria-selected
   qsa('.cat').forEach(el => {
     const isActive = el.textContent === state.active;
     el.classList.toggle('active', isActive);
@@ -272,9 +241,15 @@ function updateCategoryUI(){
   });
 
   const total = state.pool.length;
-  const displayed = state.lastDisplayedIndex ?? (total === 0 ? 0 : 1);
-  if(progressEl) progressEl.textContent = `${displayed} / ${total}`;
-
+  // Human-friendly current index: show 1-based index if there's at least one item.
+  const current = total === 0 ? 0 : Math.min(state.index, total); // state.index points to next to show in showNext; displayCurrent uses displayedIndex
+  if(progressEl) {
+    // compute displayed index: if we have previously displayed item, attempt to show that 1-based position
+    // we'll store lastDisplayedIndex as last shown position (1-based) on state for accurate progress
+    const displayed = state.lastDisplayedIndex ?? (total === 0 ? 0 : 1);
+    progressEl.textContent = `${displayed} / ${total}`;
+  }
+  // update notification button state if present
   const btnNotify = qs('#btn-notify');
   if(btnNotify) {
     if(LS.get('notifications', false) && Notification.permission === 'granted'){
@@ -286,10 +261,14 @@ function updateCategoryUI(){
   }
 }
 
+// Show the currently indexed item (used after setting state.index)
 function displayCurrent(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // state.index is 0-based and points to next item to show in showNext flow.
+  // For displayCurrent, if state.index === 0, we want pool[0].
   const idxToShow = (state.index % state.pool.length + state.pool.length) % state.pool.length;
   const item = state.pool[idxToShow];
+  // remember displayed index for progress
   state.lastDisplayedIndex = idxToShow + 1;
 
   if(!skipFade && quoteEl && authorEl){
@@ -297,6 +276,7 @@ function displayCurrent(skipFade = false){
     setTimeout(() => {
       quoteEl.textContent = item.text;
       authorEl.textContent = item.author ? `— ${item.author}` : '';
+      // trigger reflow for animation
       void quoteEl.offsetWidth;
       quoteEl.classList.remove('enter'); authorEl.classList.remove('enter');
       updateCategoryUI();
@@ -308,21 +288,29 @@ function displayCurrent(skipFade = false){
   }
 }
 
+// Advance to next item (wraps)
 function showNext(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // show current then increment index for next time
   displayCurrent(skipFade);
   state.index = (state.index + 1) % state.pool.length;
+  // after showing, update lastDisplayedIndex already set in displayCurrent
   updateCategoryUI();
 }
 
+// Show previous item (wrap backwards)
 function showPrevious(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
+  // decrement index to point to previous item, then display it
+  // Because state.index points to the "next to show" in normal flow, previous is:
   state.index = (state.index - 1 + state.pool.length) % state.pool.length;
   displayCurrent(skipFade);
+  // increment index so that subsequent showNext continues forward from the item after the displayed one
   state.index = (state.index + 1) % state.pool.length;
   updateCategoryUI();
 }
 
+// Text wrapping for canvas
 function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   const words = text.split(' ');
   let line = '', lines = [];
@@ -339,6 +327,7 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   lines.forEach((l, i) => ctx.fillText(l, x, y + (i * lineHeight)));
 }
 
+// Share quote as an image (graceful fallback)
 function shareQuoteImage(){
   if(!quoteEl) return;
   const text = quoteEl.textContent || '';
@@ -346,11 +335,13 @@ function shareQuoteImage(){
   const canvas = document.createElement('canvas');
   canvas.width = 1200; canvas.height = 675;
   const ctx = canvas.getContext('2d');
+  // gradient background
   const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
   grad.addColorStop(0,'#ffecd2'); grad.addColorStop(1,'#fcb69f');
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
+  // text (attempt to use Inter - will fallback to sans-serif)
   ctx.fillStyle = '#222';
   ctx.textAlign = 'center';
   ctx.font = 'bold 40px Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -367,6 +358,7 @@ function shareQuoteImage(){
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         await navigator.share({ files: [file], title: 'Daily Inspiration' }).catch(()=>{});
       } else {
+        // download fallback
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -377,6 +369,7 @@ function shareQuoteImage(){
         URL.revokeObjectURL(url);
       }
     } catch (e) {
+      // older browsers: fallback to data URL download
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
@@ -388,6 +381,7 @@ function shareQuoteImage(){
   });
 }
 
+// Notifications
 function enableNotifications(){
   if(!('Notification' in window)){ alert('Not supported'); return; }
   Notification.requestPermission().then(p => {
@@ -398,13 +392,16 @@ function enableNotifications(){
 
 let _notifyTimeoutId = null;
 function scheduleDailyNotification(hour = 9){
+  // clear previous timeout/interval
   if(_notifyTimeoutId) { clearTimeout(_notifyTimeoutId); _notifyTimeoutId = null; }
+  // time until next target hour (local)
   const now = new Date();
   let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
   if(now >= target) target.setDate(target.getDate() + 1);
   const msToNext = target - now;
   _notifyTimeoutId = setTimeout(() => {
     sendDailyNotification();
+    // subsequent notifications every 24h
     _notifyTimeoutId = setInterval(sendDailyNotification, 24 * 60 * 60 * 1000);
   }, msToNext);
 }
@@ -423,6 +420,7 @@ function sendDailyNotification(){
   }
 }
 
+// --- Swipe gestures for mobile ---
 let touchStartX = 0, touchEndX = 0;
 const swipeThreshold = 50;
 const touchTarget = qs('#quote-box');
@@ -438,53 +436,65 @@ function handleSwipe(){
   }
 }
 
+// --- Initialization ---
 function initApp(){
+  // build UI
   buildCategories();
 
+  // wire up core buttons (if present)
   const btnNext = qs('#btn-float-next');
   const btnPrev = qs('#btn-float-prev');
   const btnShare = qs('#btn-share-image');
   const btnNotify = qs('#btn-notify');
 
   if(btnNext) btnNext.addEventListener('click', () => showNext(false));
-  if(btnPrev) {
-    // explicit wiring to ensure prev works
-    btnPrev.addEventListener('click', () => showPrevious(false));
-    btnPrev.setAttribute('aria-pressed','false');
-  }
+  if(btnPrev) btnPrev.addEventListener('click', () => showPrevious(false));
   if(btnShare) btnShare.addEventListener('click', shareQuoteImage);
   if(btnNotify) btnNotify.addEventListener('click', enableNotifications);
 
+  // keyboard shortcuts
   document.addEventListener('keydown', e => {
+    // don't hijack when typing in inputs, etc.
     const activeIsInput = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
     if(activeIsInput) return;
-    if(e.key === ' '){ e.preventDefault(); showNext(); }
-    else if(e.key === 's'){ shareQuoteImage(); }
-    else if(e.key === 'ArrowRight'){ showNext(); }
-    else if(e.key === 'ArrowLeft'){ showPrevious(); }
+    if(e.key === ' '){
+      e.preventDefault();
+      showNext();
+    } else if(e.key === 's'){
+      // use existing share function
+      shareQuoteImage();
+    } else if(e.key === 'ArrowRight'){
+      showNext();
+    } else if(e.key === 'ArrowLeft'){
+      showPrevious();
+    }
   });
 
+  // restore UI state: random toggle (if you add a UI element for it later)
   const persistedRandom = LS.get('random', false);
   state.random = !!persistedRandom;
 
+  // restore last category (if present), else pick first available
   const persistedLast = LS.get('lastCategory', null);
   const lastToUse = (persistedLast && state.categories.includes(persistedLast)) ? persistedLast : (state.categories[0] || 'General');
   if(lastToUse) selectCategory(lastToUse);
 
+  // splash hide
   const splash = qs('#splash');
   if(splash){
     requestAnimationFrame(()=> splash.classList.add('hidden-splash'));
     splash.addEventListener('transitionend', () => { try { splash.remove(); } catch (e) {} });
   }
 
+  // service worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./service-worker.js').catch(e => console.warn('SW failed', e));
   }
 
+  // schedule notification if previously enabled
   if(LS.get('notifications', false) && Notification.permission === 'granted'){
     scheduleDailyNotification();
-    const btn = qs('#btn-notify');
-    if(btn){ btn.textContent = '🔔 On'; btn.setAttribute('aria-pressed','true'); }
+    if(btnNotify){ btnNotify.textContent = '🔔 On'; btnNotify.setAttribute('aria-pressed','true'); }
   }
 }
 
@@ -492,6 +502,13 @@ function initApp(){
 
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 
