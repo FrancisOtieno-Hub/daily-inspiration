@@ -18,7 +18,7 @@
   .app{width:100%;max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:18px;}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
   .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,#fff,#fee9d6);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 8px 22px rgba(0,0,0,0.08)}
+  .logo{width:56px;height:56px;border-radius:50%;background:linear-gradient(180deg,#fff,#fee9d6);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 8px 22px rgba(0,0,0,0.08);backdrop-filter:saturate(180%) blur(8px);}
   h1{font-size:1.15rem;margin:0}
   p.lead{margin:0;color:var(--muted);font-size:0.95rem}
 
@@ -143,6 +143,13 @@
 <button id="btn-float-prev" aria-label="Previous Quote">⟵</button>
 
 <script>
+/* Cleaned, corrected and improved app.js embedded for convenience.
+   - Fixed ID mismatches, added missing controls, accessibility improvements
+   - Autoplay, random mode, share image, export, favorites indicator
+   - Splash uses transitionend to remove element
+   - Service worker registration path adjusted to relative
+*/
+
 const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false };
 let autoMode = false, autoInterval = null;
 
@@ -357,7 +364,7 @@ function initApp(){
   if(LS.get('notifications', false) && Notification.permission === 'granted'){ qs('#btn-notify').textContent='🔔 On'; qs('#btn-notify').setAttribute('aria-pressed','true'); scheduleDailyNotification(); }
 
   // register service worker relative to this file
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('/service-worker.js').catch(e=>console.warn('SW failed', e)); }
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').catch(e=>console.warn('SW failed', e)); }
 
   // handle install prompt
   let deferredPrompt;
@@ -381,6 +388,7 @@ function initApp(){
 
 </body>
 </html>
+
 
 
 
