@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Inspiration — Multi‑Category PWA</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f57c00">
+<style>
+  :root {
+    --bg1:#ffecd2; --bg2:#fcb69f; --card:rgba(255,255,255,0.92);
+    --accent:#f57c00; --muted:#6b6b6b; --glass:rgba(255,255,255,0.6); --radius:14px;
+    font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{height:100%;margin:0;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased;color:#222;}
+  .app{width:100%;max-width:900px;padding:20px;display:flex;flex-direction:column;gap:18px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,#fff,#fee9d6);
+  display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+  h1{font-size:1.15rem;margin:0;} p.lead{margin:0;color:var(--muted);font-size:0.95rem;}
+  .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 8px 28px rgba(0,0,0,0.08);}
+  .categories{display:flex;gap:8px;flex-wrap:wrap;}
+  .cat{color:#222;background:var(--glass);padding:8px 12px;border-radius:12px;cursor:pointer;
+  border:1px solid rgba(0,0,0,0.04);font-weight:600;}
+  .cat.active{background:#fff;border-color:rgba(0,0,0,0.08);box-shadow:0 6px 14px rgba(0,0,0,0.06);}
+  .quote-area{display:flex;flex-direction:column;gap:12px;}
+  .quote-box{padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.92));
+  box-shadow:0 4px 16px rgba(0,0,0,0.05);}
+  .quote-text{font-size:1.35rem;line-height:1.4;margin:0;transition:opacity .3s,transform .3s;}
+  .author{font-weight:700;color:var(--muted);text-align:right;transition:opacity .3s,transform .3s;}
+  .fade{opacity:0;transform:translateY(6px);}
+  .controls,.favorites{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;}
+  button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700;}
+  .btn-ghost{background:transparent;color:var(--accent);border:2px solid rgba(255,255,255,0.5);}
+  .small{padding:8px 10px;font-size:0.95rem;}
+  .meta{display:flex;gap:12px;align-items:center;justify-content:space-between;}
+  .fav-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .chip{background:#fff;padding:6px 10px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);font-size:0.9rem;cursor:pointer;}
+  #splash{position:fixed;width:100%;height:100%;background:linear-gradient(to right,#ffecd2,#fcb69f);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;opacity:1;transition:opacity 1s ease;}
+  #splash img{width:120px;height:120px;margin-bottom:20px;}
+  #splash h1{font-size:2rem;color:#fff;text-shadow:1px 1px 5px rgba(0,0,0,0.2);}
+  @media (max-width:600px){.quote-text{font-size:1.05rem;}.logo{width:48px;height:48px;}}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="icon-512.png" alt="App Icon">
+  <h1>Daily Inspiration</h1>
+</div>
+
+<main class="app" role="main">
+  <header>
+    <div class="brand">
+      <div class="logo">DI</div>
+      <div>
+        <h1>Daily Inspiration</h1>
+        <p class="lead">Choose a category. Save favorites. Daily reminders.</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button id="btn-share" class="small" title="Share current">Share</button>
+      <button id="btn-notify" class="small">Enable Notifications</button>
+      <input id="search" placeholder="Search…" class="search">
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="categories" id="categories" role="tablist" aria-label="Categories"></div>
+    <div class="quote-area">
+      <div id="quote-box" class="quote-box">
+        <p id="quote" class="quote-text" aria-live="polite">Loading…</p>
+        <p id="author" class="author"></p>
+      </div>
+
+      <div class="meta">
+        <div class="favorites">
+          <button id="btn-random" class="small btn-ghost">Next</button>
+          <button id="btn-fav" class="small">★ Favorite</button>
+        </div>
+        <div id="progress" style="font-size:0.9rem;color:var(--muted)">0 / 0</div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-show-list" class="btn-ghost small">View All</button>
+        <button id="btn-export" class="small">Export Favorites</button>
+        <button id="btn-auto" class="small btn-ghost">Auto Off</button>
+        <button id="btn-share-img" class="small btn-ghost">Share as Image</button>
+      </div>
+
+      <div id="favorites-panel" style="display:none;margin-top:10px;">
+        <div style="font-weight:700;margin-bottom:8px">Favorites</div>
+        <div class="fav-list" id="fav-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="all-panel" class="card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0;font-size:1rem">All Items</h2>
+      <button id="btn-close-list" class="btn-ghost small">Close</button>
+    </div>
+    <div id="all-items" style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
+  </section>
+
+  <footer style="margin-top:8px;color:var(--muted);font-size:0.9rem;text-align:center">
+    Built with care • Offline ready • Customize categories in code or backend
+  </footer>
+</main>
+
+<script>
+  const DB = {}, state = { categories: [], active: null, pool: [], index: 0 }, qs=s=>document.querySelector(s), qsa=s=>Array.from(document.querySelectorAll(s));
+  let autoMode=false, autoInterval;
+
+  const LS={get:(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch(e){return f}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+
+  fetch('quotes.json').then(r=>r.json()).then(data=>{Object.assign(DB,data);state.categories=Object.keys(DB);initApp();});
+
+  const quoteEl=qs('#quote'), authorEl=qs('#author'), progressEl=qs('#progress');
+  const categoriesEl=qs('#categories'), favPanel=qs('#favorites-panel'), favList=qs('#fav-list');
+
+  function shuffle(arr){for(let i=arr.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
+
+  function buildCategories(){categoriesEl.innerHTML='';state.categories.forEach(cat=>{const btn=document.createElement('button');btn.className='cat';btn.textContent=cat;btn.setAttribute('role','tab');btn.onclick=()=>selectCategory(cat);categoriesEl.appendChild(btn);});}
+
+  function selectCategory(cat){
+    state.active=cat; state.pool=[...(DB[cat]||[])]; shuffle(state.pool); state.index=0;
+    updateCategoryUI(); showNext(true); LS.set('lastCategory',cat);
+  }
+
+  function updateCategoryUI(){qsa('.cat').forEach(el=>el.classList.toggle('active',el.textContent===state.active));
+    progressEl.textContent=`${Math.min(state.index,state.pool.length)} / ${state.pool.length}`;}
+
+  function showNext(skipFade=false){
+    if(!state.pool||state.pool.length===0){quoteEl.textContent='No items in this category.';authorEl.textContent='';progressEl.textContent='0 / 0';return;}
+    if(state.index>=state.pool.length) state.index=0;
+    const item=state.pool[state.index++];
+    if(!skipFade){quoteEl.classList.add('fade');authorEl.classList.add('fade');
+      setTimeout(()=>{quoteEl.textContent=item.text;authorEl.textContent=item.author?`— ${item.author}`:'';quoteEl.classList.remove('fade');authorEl.classList.remove('fade');updateCategoryUI();},300);
+    } else {quoteEl.textContent=item.text;authorEl.textContent=item.author?`— ${item.author}`:'';updateCategoryUI();}
+  }
+
+  function getFavorites(){return LS.get('favorites',[]);}
+  function toggleFavorite(){const cur={text:quoteEl.textContent,author:authorEl.textContent.replace(/^—\s?/,'') ,category:state.active};
+    const favs=getFavorites();const idx=favs.findIndex(f=>f.text===cur.text&&f.author===cur.author);idx>=0?favs.splice(idx,1):favs.unshift(cur);LS.set('favorites',favs);renderFavorites();}
+  function renderFavorites(){const favs=getFavorites();favList.innerHTML='';if(!favs.length){favPanel.style.display='none';return;}favPanel.style.display='block';
+    favs.forEach(f=>{const chip=document.createElement('div');chip.className='chip';chip.textContent=f.text.length>80?f.text.slice(0,80)+'…':f.text;
+      chip.title=(f.author?f.author+': ':'')+f.text;chip.onclick=()=>{quoteEl.textContent=f.text;authorEl.textContent=f.author?`— ${f.author}`:'';updateCategoryUI();};favList.appendChild(chip);});}
+
+  function shareCurrent(){const text=quoteEl.textContent+(authorEl.textContent?' '+authorEl.textContent:'');
+    if(navigator.share){navigator.share({text,title:'Daily Inspiration'});} else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>alert('Copied!'));} else prompt('Copy the quote:',text);}
+
+  function exportFavorites(){const favs=getFavorites();if(!favs.length){alert('No favorites to export.');return;}
+    const blob=new Blob([favs.map(f=>`"${f.text.replace(/\"/g,'\\\"')}" — ${f.author}`).join('\n\n')],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='favorites.txt';a.click();URL.revokeObjectURL(url);}
+  
+  function shareQuoteImage() {
+  const text = quoteEl.textContent;
+  const author = authorEl.textContent.replace(/^—\s?/, '');
+  
+  // Canvas setup
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 450;
+  const ctx = canvas.getContext('2d');
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  grad.addColorStop(0, '#ffecd2');
+  grad.addColorStop(1, '#fcb69f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Text styling
+  ctx.fillStyle = '#222';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 32px Inter, sans-serif';
+  wrapText(ctx, text, canvas.width/2, 150, 700, 40);
+
+  if(author){
+    ctx.font = 'italic 24px Inter, sans-serif';
+    ctx.fillText(`— ${author}`, canvas.width/2, 350);
+  }
+
+  // Convert to blob and share or download
+  canvas.toBlob(async blob => {
+    if(navigator.canShare && navigator.canShare({files:[new File([blob], 'quote.png', {type:'image/png'})]})){
+      navigator.share({files:[new File([blob], 'quote.png', {type:'image/png'})], title:'Daily Inspiration'});
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'quote.png'; a.click();
+      URL.revokeObjectURL(url);
+    }
+  });
+}
+
+// Helper to wrap long text
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '', lines = [];
+  for(let n=0; n<words.length; n++){
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    if(metrics.width > maxWidth && n > 0){lines.push(line); line = words[n]+' ';} 
+    else {line = testLine;}
+  }
+  lines.push(line);
+  lines.forEach((l,i)=>ctx.fillText(l, x, y + (i*lineHeight)));
+}
+
+  function renderAllItems(){const panel=qs('#all-panel');const grid=qs('#all-items');grid.innerHTML='';
+    state.categories.forEach(cat=>(DB[cat]||[]).forEach(it=>{const cell=document.createElement('div');cell.className='chip';
+      cell.textContent=it.text.length>60?it.text.slice(0,60)+'…':it.text;
+      cell.title=`${cat} — ${it.author||''}\n\n${it.text}`;
+      cell.onclick=()=>{quoteEl.textContent=it.text;authorEl.textContent=it.author?`— ${it.author}`:'';window.scrollTo({top:0,behavior:'smooth'});};
+      grid.appendChild(cell);}));panel.style.display='block';}
+
+  function enableNotifications(){if(!('Notification'in window)){alert('Not supported');return;}
+    Notification.requestPermission().then(p=>{if(p==='granted'){LS.set('notifications',true);scheduleDailyNotification();qs('#btn-notify').textContent='Notifications: On';}else alert('Notifications denied');});}
+
+  function scheduleDailyNotification(){if(window._notifyInterval) clearInterval(window._notifyInterval);
+    const msToNext=(hour=9)=>{const now=new Date();let t=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hour);if(now>t)t.setDate(t.getDate()+1);return t-now;};
+    setTimeout(()=>{sendDailyNotification();window._notifyInterval=setInterval(sendDailyNotification,24*60*60*1000);},msToNext());}
+
+  function sendDailyNotification(){const cat=LS.get('lastCategory',state.categories[0]);const items=DB[cat]||[];if(!items.length)return;
+    const dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/1000/60/60/24);
+    const item=items[dayOfYear%items.length];
+    if('serviceWorker' in navigator&&navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:'show-notification',title:'Daily Inspiration',body:item.text+(item.author?` — ${item.author}`:'')});}
+    else if(Notification.permission==='granted'){new Notification('Daily Inspiration',{body:item.text+(item.author?` — ${item.author}`:'')});}}
+
+  function initApp(){
+    buildCategories();const last=LS.get('lastCategory',state.categories[0]);selectCategory(last);renderFavorites();
+    qs('#btn-random').onclick=()=>showNext();qs('#btn-fav').onclick=toggleFavorite;qs('#btn-share').onclick=shareCurrent;
+    qs('#btn-export').onclick=exportFavorites;qs('#btn-show-list').onclick=renderAllItems;qs('#btn-close-list').onclick=()=>qs('#all-panel').style.display='none';
+    qs('#btn-notify').onclick=enableNotifications;qs('#btn-auto').onclick=()=>{autoMode=!autoMode;qs('#btn-auto').textContent=autoMode?'Auto On':'Auto Off';};
+    qs('#btn-share-img').onclick = shareQuoteImage;
+    if(LS.get('notifications',false)&&Notification.permission==='granted'){qs('#btn-notify').textContent='Notifications: On';scheduleDailyNotification();}
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js').catch(e=>console.warn('SW failed',e));}
+    let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;
+      const btn=document.createElement('button');btn.textContent="Install App";btn.className="small btn-ghost";
+      btn.onclick=async()=>{btn.remove();deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;};
+      document.querySelector('header').appendChild(btn);});
+    qs('#search').oninput=e=>{const q=e.target.value.toLowerCase();qsa('#all-items .chip').forEach(el=>el.style.display=el.title.toLowerCase().includes(q)?'':'none');};
+    setInterval(()=>{if(autoMode)showNext();},8000);
+    document.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();showNext();}if(e.key==='f')toggleFavorite();if(e.key==='s')shareCurrent();});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')renderFavorites();});
+    setTimeout(()=>qs('#splash').style.opacity=0,500);
+    setTimeout(()=>qs('#splash').style.display='none',1500);
+  }
+</script>
+</body>
+</html>
