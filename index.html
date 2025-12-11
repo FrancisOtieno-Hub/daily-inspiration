@@ -48,13 +48,30 @@
   .chip{background:#fff;padding:8px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);font-size:0.95rem;cursor:pointer}
   .fav-active{filter:drop-shadow(0 2px 6px rgba(0,0,0,0.12));}
 
-  /* Splash */
-  #splash{position:fixed;width:100%;height:100%;background:linear-gradient(to right,#ffecd2,#fcb69f);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;  opacity:0;transform:scale(1.03);transition:opacity 400ms ease, transform 400ms ease;}
-  #splash.show {opacity:1;transform:scale(1);}
+/* Splash */
+#splash {
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:linear-gradient(to right,#ffecd2,#fcb69f);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+  opacity:1;                          /* start fully visible */
+  transition:opacity 0.8s ease;       /* fade out only */
+}
+
   #splash img{width:120px;height:120px;margin-bottom:18px;border-radius:50% !important;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,0.12);}
   #splash h1{font-size:2rem;color:#fff;text-shadow:1px 1px 6px rgba(0,0,0,0.2)}
   .hidden-splash{opacity:0;transform:scale(1.03);pointer-events:none}
 
+  main.app {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  }
+  
   /* Floating next button for mobile */
   #btn-float-next,#btn-float-prev{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));padding:14px 18px;border-radius:50px;background:var(--accent);color:#fff;font-weight:800;border:none;box-shadow:0 8px 26px rgba(0,0,0,0.16);z-index:999}
   #btn-float-next{right:20px}
@@ -499,18 +516,28 @@ function initApp(){
   const lastToUse = (persistedLast && state.categories.includes(persistedLast)) ? persistedLast : (state.categories[0] || 'General');
   if(lastToUse) selectCategory(lastToUse);
 
-  // splash hide
-  const splash = qs('#splash');
-  if (splash) {
-    // NEW — fade-in on load
-    requestAnimationFrame(() => splash.classList.add('show'));
-  
-    // Existing fade-out
-    requestAnimationFrame(() => splash.classList.add('hidden-splash'));
-    splash.addEventListener('transitionend', () => {
-      try { splash.remove(); } catch (e) {}
-    });
-  }
+// Timed splash fade-in then fade-out
+const splash = qs('#splash');
+const main = qs('main.app');
+
+if (splash && main) {
+  // 1. Fade-in handled automatically (opacity:1 initially)
+
+  // 2. Wait, then fade-out splash
+  setTimeout(() => {
+    splash.style.opacity = 0;
+
+    // 3. After fade-out duration, hide splash & fade-in main
+    setTimeout(() => {
+      splash.style.display = 'none';
+      main.style.opacity = 1;
+
+      // Optional: show next quote immediately after splash
+      showNext(true);
+    }, 800); // matches CSS transition (0.8s)
+  }, 1200); // time splash stays visible (feel free to adjust)
+}
+
 
   // service worker
   if('serviceWorker' in navigator){
@@ -529,6 +556,7 @@ function initApp(){
 
 </body>
 </html>
+
 
 
 
