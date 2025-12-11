@@ -256,7 +256,7 @@
   {"text": "Original perseverance is acting despite resistance.", "author":"Original"},
   {"text": "Discipline is the internal compass guiding you toward your highest goals.", "author":"Original"}
 ],
-"Faith & Spirituality": [
+"Faith": [
   {"text": "Let your faith be bigger than your fears.", "author":"Original"},
   {"text": "When you do things from your soul, you feel a river moving in you.", "author":"Rumi"},
   {"text": "Faith is taking the first step even when you don’t see the whole staircase.", "author":"Martin Luther King Jr."},
@@ -343,7 +343,7 @@
   {"text": "Faith transforms uncertainty into a canvas of possibilities.", "author":"Original"},
   {"text": "Original wisdom is acting in faith before the full picture is revealed.", "author":"Original"}
 ],
-"Courage & Confidence": [
+"Courage": [
   {"text": "Courage starts with showing up and letting ourselves be seen.", "author":"Brené Brown"},
   {"text": "You are stronger than you think, braver than you feel, and more capable than you imagine.", "author":"Original"},
   {"text": "The man who moves a mountain begins by carrying away small stones.", "author":"Confucius"},
@@ -423,7 +423,7 @@
   {"text": "Courage is the discovery that you may not win, and trying when you know you can lose.", "author":"Original"},
   {"text": "Original confidence is keeping your head up even when the world doubts you.", "author":"Original"}
 ],
-"Happiness & Positivity": [
+"Happiness": [
   {"text": "Don’t count the days. Make the days count.", "author":"Muhammad Ali"},
   {"text": "Happiness is not something ready made. It comes from your own actions.", "author":"Dalai Lama"},
   {"text": "Be happy for this moment. This moment is your life.", "author":"Omar Khayyam"},
@@ -513,7 +513,7 @@
   {"text": "Happiness is the music of a grateful heart.", "author":"Original"},
   {"text": "Original joy is nurturing kindness, laughter, and love daily.", "author":"Original"}
 ],
-"African Proverbs & Cultural Wisdom": [
+"African": [
   {"text": "Wisdom does not come overnight.", "author":"Somali Proverb"},
   {"text": "If you want to go fast, go alone. If you want to go far, go together.", "author":"African Proverb"},
   {"text": "Rain does not fall on one roof alone.", "author":"Cameroonian Proverb"},
@@ -612,4 +612,5 @@
   {"text": "No one knows the strength of a tree until it falls.", "author":"African Proverb"}
 ]
 }
+
 
