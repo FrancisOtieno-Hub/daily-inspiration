@@ -1,15 +1,12 @@
 # Daily Inspiration — Multi-Category PWA
-A Progressive Web App (PWA) that delivers daily motivational quotes across multiple categories. Users can browse, favorite, share, and receive daily notifications with inspiring quotes. Perfect for personal growth, mindfulness, and daily motivation.
+A Progressive Web App (PWA) that delivers daily motivational quotes across multiple categories. Users can browse, share, and receive daily notifications with inspiring quotes. Perfect for personal growth, mindfulness, and daily motivation.
 
 ## Features
 - **Multi-category quotes:** Browse quotes by categories like Motivation, Life, Wisdom, etc.  
-- **Favorites:** Save and manage your favorite quotes for quick access.  
-- **Next / Previous Navigation:** Easily navigate through quotes.  
-- **Auto Mode:** Automatically cycle through quotes at a set interval.  
+- **Next / Previous Navigation:** Easily navigate through quotes.   
 - **Share Quotes:** Share your favorite quotes as text or images.  
 - **Daily Notifications:** Receive daily motivational notifications at your preferred time.  
-- **Offline-ready:** Works as a PWA; installable on mobile and desktop.  
-- **Search:** Quickly find quotes using a search box.  
+- **Offline-ready:** Works as a PWA; installable on mobile and desktop.
 
 ## Demo
 ![Screenshot](screenshot.png)  
@@ -32,10 +29,8 @@ Then open `http://localhost:8080`.
 ## Usage
 1. Select a **category** to browse quotes.
 2. Use **Next / Previous** to navigate quotes.
-3. Click **★ Favorite** to save quotes.
-4. Click **Share** to copy the quote or **Share as Image** for a visual version.
-5. Enable **Notifications** for daily reminders.
-6. Turn **Auto Mode** on to cycle quotes automatically.
+3. Click **Share** to share the quote as an image.
+4. Enable **Notifications** for daily reminders.
 
 ## File Structure
 ```
