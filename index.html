@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Daily Inspiration — Multi‑Category PWA</title>
+<title>Daily Inspiration — Multi-Category PWA</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f57c00">
 <style>
@@ -125,7 +125,10 @@
 <button id="btn-float-prev" aria-label="Previous Quote">Prev</button>
 
 <script>
-const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false };
+/* ----------------------
+   Data + state
+   ---------------------- */
+const DB = {}, state = { categories: [], active: null, pool: [], index: 0, random: false, lastDisplayedIndex: 0 };
 const qs = s => document.querySelector(s), qsa = s => Array.from(document.querySelectorAll(s));
 const LS = {
   get: (k, fallback) => {
@@ -140,13 +143,17 @@ const LS = {
   }
 };
 
-let autoMode = false, autoInterval = null;
+let autoMode = false;
+let _notifyTimeoutId = null;
+let _notifyIntervalId = null;
 
-// Elements we expect (guarded usage)
+// Elements
 const quoteEl = qs('#quote'), authorEl = qs('#author'), progressEl = qs('#progress');
 const categoriesEl = qs('#categories');
 
-// utility
+/* ----------------------
+   Helpers
+   ---------------------- */
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     let j = Math.floor(Math.random()*(i+1));
@@ -154,7 +161,9 @@ function shuffle(arr){
   }
 }
 
-// --- fetch quotes.json with fallback ---
+/* ----------------------
+   Load quotes.json (fallback to a welcome item)
+   ---------------------- */
 (async function loadQuotes(){
   try{
     const r = await fetch('quotes.json');
@@ -170,7 +179,9 @@ function shuffle(arr){
   }
 })();
 
-// Build categories as accessible tabs
+/* ----------------------
+   Build category buttons
+   ---------------------- */
 function buildCategories(){
   if(!categoriesEl) return;
   categoriesEl.innerHTML = '';
@@ -180,13 +191,13 @@ function buildCategories(){
     btn.textContent = cat;
     btn.setAttribute('role', 'tab');
     btn.setAttribute('aria-selected', 'false');
-    btn.setAttribute('tabindex', i === 0 ? '0' : '-1'); // only first is in tab order initially
+    btn.setAttribute('tabindex', i === 0 ? '0' : '-1');
     btn.id = `tab-${i}`;
     btn.setAttribute('aria-controls', 'quote-box');
     btn.addEventListener('click', () => selectCategory(cat));
     btn.addEventListener('keydown', (e) => {
-      // Arrow navigation between categories
-      if(e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End'){
+      // Arrow/Home/End navigation between category buttons
+      if(['ArrowRight','ArrowLeft','Home','End'].includes(e.key)){
         e.preventDefault();
         const all = qsa('.cat');
         const idx = all.indexOf(btn);
@@ -206,10 +217,13 @@ function buildCategories(){
   });
 }
 
-// Select a category and prepare pool
+/* ----------------------
+   Category selection and pool preparation
+   ---------------------- */
 function selectCategory(cat){
   state.active = cat;
-  state.pool = Array.isArray(DB[cat]) ? [...DB[cat]] : [];
+  const items = Array.isArray(DB[cat]) ? [...DB[cat]] : [];
+  state.pool = items;
   if(state.pool.length === 0){
     state.index = 0;
     renderEmpty();
@@ -218,21 +232,27 @@ function selectCategory(cat){
     return;
   }
   if(state.random) shuffle(state.pool);
+  // set index to 0 (current displayed item), then show it
   state.index = 0;
-  // show first item immediately (consistent)
   displayCurrent(true);
   updateCategoryUI();
   LS.set('lastCategory', cat);
 }
 
+/* ----------------------
+   Empty rendering
+   ---------------------- */
 function renderEmpty(){
   if(quoteEl) quoteEl.textContent = 'No items in this category.';
   if(authorEl) authorEl.textContent = '';
   if(progressEl) progressEl.textContent = '0 / 0';
 }
 
+/* ----------------------
+   Update UI state for categories and progress
+   ---------------------- */
 function updateCategoryUI(){
-  // update active class and aria-selected
+  // update active class and aria-selected/tabindex
   qsa('.cat').forEach(el => {
     const isActive = el.textContent === state.active;
     el.classList.toggle('active', isActive);
@@ -241,42 +261,39 @@ function updateCategoryUI(){
   });
 
   const total = state.pool.length;
-  // Human-friendly current index: show 1-based index if there's at least one item.
-  const current = total === 0 ? 0 : Math.min(state.index, total); // state.index points to next to show in showNext; displayCurrent uses displayedIndex
+  // displayed index is 1-based
+  const displayed = (total === 0) ? 0 : (state.index + 1);
   if(progressEl) {
-    // compute displayed index: if we have previously displayed item, attempt to show that 1-based position
-    // we'll store lastDisplayedIndex as last shown position (1-based) on state for accurate progress
-    const displayed = state.lastDisplayedIndex ?? (total === 0 ? 0 : 1);
     progressEl.textContent = `${displayed} / ${total}`;
   }
-  // update notification button state if present
+
+  // update notification button label/pressed state
   const btnNotify = qs('#btn-notify');
   if(btnNotify) {
-    if(LS.get('notifications', false) && Notification.permission === 'granted'){
-      btnNotify.textContent = '🔔 On';
-      btnNotify.setAttribute('aria-pressed', 'true');
-    } else {
-      btnNotify.setAttribute('aria-pressed', 'false');
-    }
+    const enabled = LS.get('notifications', false) && Notification.permission === 'granted';
+    btnNotify.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    btnNotify.textContent = enabled ? '🔔 On' : 'Enable Notification';
   }
 }
 
-// Show the currently indexed item (used after setting state.index)
+/* ----------------------
+   Display current item
+   ---------------------- */
 function displayCurrent(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
-  // state.index is 0-based and points to next item to show in showNext flow.
-  // For displayCurrent, if state.index === 0, we want pool[0].
-  const idxToShow = (state.index % state.pool.length + state.pool.length) % state.pool.length;
-  const item = state.pool[idxToShow];
-  // remember displayed index for progress
-  state.lastDisplayedIndex = idxToShow + 1;
+  // ensure index is within bounds
+  state.index = ((state.index % state.pool.length) + state.pool.length) % state.pool.length;
+  const item = state.pool[state.index];
+
+  // remember displayed index (1-based)
+  state.lastDisplayedIndex = state.index + 1;
 
   if(!skipFade && quoteEl && authorEl){
+    // fade in animation
     quoteEl.classList.add('enter'); authorEl.classList.add('enter');
     setTimeout(() => {
       quoteEl.textContent = item.text;
       authorEl.textContent = item.author ? `— ${item.author}` : '';
-      // trigger reflow for animation
       void quoteEl.offsetWidth;
       quoteEl.classList.remove('enter'); authorEl.classList.remove('enter');
       updateCategoryUI();
@@ -288,29 +305,24 @@ function displayCurrent(skipFade = false){
   }
 }
 
-// Advance to next item (wraps)
+/* ----------------------
+   Navigation: next / previous
+   ---------------------- */
 function showNext(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
-  // show current then increment index for next time
-  displayCurrent(skipFade);
   state.index = (state.index + 1) % state.pool.length;
-  // after showing, update lastDisplayedIndex already set in displayCurrent
-  updateCategoryUI();
+  displayCurrent(skipFade);
 }
 
-// Show previous item (wrap backwards)
 function showPrevious(skipFade = false){
   if(!state.pool || state.pool.length === 0) return renderEmpty();
-  // decrement index to point to previous item, then display it
-  // Because state.index points to the "next to show" in normal flow, previous is:
   state.index = (state.index - 1 + state.pool.length) % state.pool.length;
   displayCurrent(skipFade);
-  // increment index so that subsequent showNext continues forward from the item after the displayed one
-  state.index = (state.index + 1) % state.pool.length;
-  updateCategoryUI();
 }
 
-// Text wrapping for canvas
+/* ----------------------
+   Canvas helpers for sharing image
+   ---------------------- */
 function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   const words = text.split(' ');
   let line = '', lines = [];
@@ -327,7 +339,6 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   lines.forEach((l, i) => ctx.fillText(l, x, y + (i * lineHeight)));
 }
 
-// Share quote as an image (graceful fallback)
 function shareQuoteImage(){
   if(!quoteEl) return;
   const text = quoteEl.textContent || '';
@@ -335,17 +346,15 @@ function shareQuoteImage(){
   const canvas = document.createElement('canvas');
   canvas.width = 1200; canvas.height = 675;
   const ctx = canvas.getContext('2d');
-  // gradient background
   const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
   grad.addColorStop(0,'#ffecd2'); grad.addColorStop(1,'#fcb69f');
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // text (attempt to use Inter - will fallback to sans-serif)
   ctx.fillStyle = '#222';
   ctx.textAlign = 'center';
   ctx.font = 'bold 40px Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-  wrapText(ctx, text, canvas.width/2, 180, 1000, 56);
+  wrapText(ctx, text, canvas.width/2, 140, 1000, 56);
   if(author){
     ctx.font = 'italic 30px Inter, system-ui, sans-serif';
     ctx.fillText(`— ${author}`, canvas.width/2, 520);
@@ -358,7 +367,6 @@ function shareQuoteImage(){
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         await navigator.share({ files: [file], title: 'Daily Inspiration' }).catch(()=>{});
       } else {
-        // download fallback
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -369,7 +377,6 @@ function shareQuoteImage(){
         URL.revokeObjectURL(url);
       }
     } catch (e) {
-      // older browsers: fallback to data URL download
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
@@ -381,28 +388,39 @@ function shareQuoteImage(){
   });
 }
 
-// Notifications
+/* ----------------------
+   Notifications
+   ---------------------- */
 function enableNotifications(){
   if(!('Notification' in window)){ alert('Not supported'); return; }
   Notification.requestPermission().then(p => {
-    if(p === 'granted'){ LS.set('notifications', true); scheduleDailyNotification(); const btn = qs('#btn-notify'); if(btn) { btn.textContent = '🔔 On'; btn.setAttribute('aria-pressed','true'); } }
-    else alert('Notifications denied');
+    if(p === 'granted'){
+      LS.set('notifications', true);
+      scheduleDailyNotification();
+      const btn = qs('#btn-notify');
+      if(btn) { btn.textContent = '🔔 On'; btn.setAttribute('aria-pressed','true'); }
+    } else {
+      LS.set('notifications', false);
+      alert('Notifications denied');
+    }
   });
 }
 
-let _notifyTimeoutId = null;
 function scheduleDailyNotification(hour = 9){
-  // clear previous timeout/interval
-  if(_notifyTimeoutId) { clearTimeout(_notifyTimeoutId); _notifyTimeoutId = null; }
-  // time until next target hour (local)
+  // clear previous timers (both timeout and interval)
+  if(_notifyTimeoutId){ clearTimeout(_notifyTimeoutId); _notifyTimeoutId = null; }
+  if(_notifyIntervalId){ clearInterval(_notifyIntervalId); _notifyIntervalId = null; }
+
+  // compute ms until next target hour in local time
   const now = new Date();
   let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
   if(now >= target) target.setDate(target.getDate() + 1);
   const msToNext = target - now;
+
   _notifyTimeoutId = setTimeout(() => {
     sendDailyNotification();
     // subsequent notifications every 24h
-    _notifyTimeoutId = setInterval(sendDailyNotification, 24 * 60 * 60 * 1000);
+    _notifyIntervalId = setInterval(sendDailyNotification, 24 * 60 * 60 * 1000);
   }, msToNext);
 }
 
@@ -416,11 +434,13 @@ function sendDailyNotification(){
   if('serviceWorker' in navigator && navigator.serviceWorker.controller){
     navigator.serviceWorker.controller.postMessage({ type: 'show-notification', title: 'Daily Inspiration', body });
   } else if(Notification.permission === 'granted'){
-    new Notification('Daily Inspiration', { body });
+    try { new Notification('Daily Inspiration', { body }); } catch(e){ console.warn('Notification failed', e); }
   }
 }
 
-// --- Swipe gestures for mobile ---
+/* ----------------------
+   Touch swipe support
+   ---------------------- */
 let touchStartX = 0, touchEndX = 0;
 const swipeThreshold = 50;
 const touchTarget = qs('#quote-box');
@@ -436,12 +456,12 @@ function handleSwipe(){
   }
 }
 
-// --- Initialization ---
+/* ----------------------
+   Initialization
+   ---------------------- */
 function initApp(){
-  // build UI
   buildCategories();
 
-  // wire up core buttons (if present)
   const btnNext = qs('#btn-float-next');
   const btnPrev = qs('#btn-float-prev');
   const btnShare = qs('#btn-share-image');
@@ -454,14 +474,13 @@ function initApp(){
 
   // keyboard shortcuts
   document.addEventListener('keydown', e => {
-    // don't hijack when typing in inputs, etc.
     const activeIsInput = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
     if(activeIsInput) return;
     if(e.key === ' '){
       e.preventDefault();
       showNext();
     } else if(e.key === 's'){
-      // use existing share function
+      // explicit share shortcut (only when not typing)
       shareQuoteImage();
     } else if(e.key === 'ArrowRight'){
       showNext();
@@ -470,11 +489,11 @@ function initApp(){
     }
   });
 
-  // restore UI state: random toggle (if you add a UI element for it later)
+  // restore random flag (future feature)
   const persistedRandom = LS.get('random', false);
   state.random = !!persistedRandom;
 
-  // restore last category (if present), else pick first available
+  // restore last category or pick first
   const persistedLast = LS.get('lastCategory', null);
   const lastToUse = (persistedLast && state.categories.includes(persistedLast)) ? persistedLast : (state.categories[0] || 'General');
   if(lastToUse) selectCategory(lastToUse);
@@ -491,10 +510,11 @@ function initApp(){
     navigator.serviceWorker.register('./service-worker.js').catch(e => console.warn('SW failed', e));
   }
 
-  // schedule notification if previously enabled
+  // schedule notification if previously enabled and permission granted
   if(LS.get('notifications', false) && Notification.permission === 'granted'){
     scheduleDailyNotification();
-    if(btnNotify){ btnNotify.textContent = '🔔 On'; btnNotify.setAttribute('aria-pressed','true'); }
+    const btn = qs('#btn-notify');
+    if(btn){ btn.textContent = '🔔 On'; btn.setAttribute('aria-pressed','true'); }
   }
 }
 
@@ -502,21 +522,3 @@ function initApp(){
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
